@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">PureGuard Mobile</string>
+    <string name="accessibility_service_name">PureGuard Browser Shield</string>
+    <string name="accessibility_service_description">Monitors browser URLs and blocks explicit pages across all browsers.</string>
+</resources>

@@ -1,0 +1,6 @@
+package com.pureguard.mobile.domain.model
+
+data class ProtectionStats(
+    val blockedCount: Int = 0,
+    val scannedCount: Int = 0
+)
