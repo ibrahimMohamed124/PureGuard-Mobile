@@ -156,6 +156,10 @@ class BlockedContentActivity : ComponentActivity() {
                                 }
                                 TextButton(
                                     onClick = {
+                                        BrowserBlockBridge.requestCloseBlockedTab(
+                                            packageName = browserPackage,
+                                            blockedUrl = blockedUrl
+                                        )
                                         goHome()
                                         finish()
                                     },

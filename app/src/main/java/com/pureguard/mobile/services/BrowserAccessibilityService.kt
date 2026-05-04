@@ -54,6 +54,7 @@ class BrowserAccessibilityService : AccessibilityService() {
             releaseIfNeeded(packageName)
             return
         }
+        if (handleCloseTabRequest(packageName)) return
 
         val now = System.currentTimeMillis()
         if (now - lastRunMs.get() < 180L) return
@@ -119,6 +120,7 @@ class BrowserAccessibilityService : AccessibilityService() {
     }
 
     private fun maybeShowBlockedUi(packageName: String, blockedUrl: String, reason: String) {
+        if (BrowserBlockBridge.shouldSuppressBlockUi(packageName, blockedUrl)) return
         if (BlockedContentActivity.isVisible) return
         val now = System.currentTimeMillis()
         val isSameBlock = lastBlockedPackage == packageName && lastBlockedUrl == blockedUrl
@@ -141,13 +143,15 @@ class BrowserAccessibilityService : AccessibilityService() {
     }
 
     private fun extractUrl(root: AccessibilityNodeInfo, packageName: String): String? {
-        BrowserPackageCatalog.knownAddressBars(packageName)
-            .asSequence()
-            .mapNotNull { id -> root.findAccessibilityNodeInfosByViewId(id).firstOrNull() }
-            .mapNotNull { node -> node.text?.toString() ?: node.contentDescription?.toString() }
-            .map { it.trim() }
-            .firstOrNull { looksLikeUrl(it) }
-            ?.let { return it }
+        val knownAddressBars = BrowserPackageCatalog.knownAddressBars(packageName)
+        if (knownAddressBars.isNotEmpty()) {
+            return knownAddressBars
+                .asSequence()
+                .mapNotNull { id -> root.findAccessibilityNodeInfosByViewId(id).firstOrNull() }
+                .mapNotNull { node -> node.text?.toString() ?: node.contentDescription?.toString() }
+                .map { it.trim() }
+                .firstOrNull { looksLikeUrl(it) }
+        }
 
         val queue = ArrayDeque<AccessibilityNodeInfo>()
         queue.add(root)
@@ -196,6 +200,19 @@ class BrowserAccessibilityService : AccessibilityService() {
 
     private fun hostOf(url: String): String? {
         return runCatching { URI(url).host?.lowercase(Locale.US) }.getOrNull()
+    }
+
+    private fun handleCloseTabRequest(packageName: String): Boolean {
+        if (!BrowserBlockBridge.consumeCloseTabRequestFor(packageName)) return false
+        scope.launch(Dispatchers.Main) {
+            performGlobalAction(GLOBAL_ACTION_BACK)
+            performGlobalAction(GLOBAL_ACTION_BACK)
+        }
+        ServiceVpn.unblockBrowserPackage(this, packageName)
+        lastBlockedPackage = null
+        lastBlockedUrl = null
+        lastSignature = ""
+        return true
     }
 
     companion object {
