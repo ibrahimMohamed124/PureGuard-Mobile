@@ -61,8 +61,11 @@ class BrowserAccessibilityService : AccessibilityService() {
         lastRunMs.set(now)
 
         val root = rootInActiveWindow ?: return
-        val extractedUrl = extractUrl(root, packageName) ?: return
-        val normalizedUrl = normalizeUrl(extractedUrl) ?: return
+        val extracted = extractUrl(root, packageName) ?: return
+        if (extracted.fromKnownAddressBar && extracted.isUserEditingAddressBar) return
+        if (event.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED && extracted.fromKnownAddressBar) return
+
+        val normalizedUrl = normalizeUrl(extracted.url) ?: return
         val signature = "$packageName|$normalizedUrl"
         if (signature == lastSignature && now - lastBlockUiAt < 1_000L) return
         lastSignature = signature
@@ -142,15 +145,22 @@ class BrowserAccessibilityService : AccessibilityService() {
         lastBlockedUrl = null
     }
 
-    private fun extractUrl(root: AccessibilityNodeInfo, packageName: String): String? {
+    private fun extractUrl(root: AccessibilityNodeInfo, packageName: String): ExtractedUrl? {
         val knownAddressBars = BrowserPackageCatalog.knownAddressBars(packageName)
         if (knownAddressBars.isNotEmpty()) {
             return knownAddressBars
                 .asSequence()
                 .mapNotNull { id -> root.findAccessibilityNodeInfosByViewId(id).firstOrNull() }
-                .mapNotNull { node -> node.text?.toString() ?: node.contentDescription?.toString() }
-                .map { it.trim() }
-                .firstOrNull { looksLikeUrl(it) }
+                .mapNotNull { node ->
+                    val raw = (node.text?.toString() ?: node.contentDescription?.toString()).orEmpty().trim()
+                    if (!looksLikeUrl(raw)) return@mapNotNull null
+                    ExtractedUrl(
+                        url = raw,
+                        fromKnownAddressBar = true,
+                        isUserEditingAddressBar = node.isFocused || node.isAccessibilityFocused
+                    )
+                }
+                .firstOrNull()
         }
 
         val queue = ArrayDeque<AccessibilityNodeInfo>()
@@ -160,15 +170,33 @@ class BrowserAccessibilityService : AccessibilityService() {
             val node = queue.removeFirst()
             visited += 1
             val text = node.text?.toString()?.trim().orEmpty()
-            if (looksLikeUrl(text)) return text
+            if (looksLikeUrl(text)) {
+                return ExtractedUrl(
+                    url = text,
+                    fromKnownAddressBar = false,
+                    isUserEditingAddressBar = false
+                )
+            }
             val hint = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 node.hintText?.toString()?.trim().orEmpty()
             } else {
                 ""
             }
-            if (looksLikeUrl(hint)) return hint
+            if (looksLikeUrl(hint)) {
+                return ExtractedUrl(
+                    url = hint,
+                    fromKnownAddressBar = false,
+                    isUserEditingAddressBar = false
+                )
+            }
             val desc = node.contentDescription?.toString()?.trim().orEmpty()
-            if (looksLikeUrl(desc)) return desc
+            if (looksLikeUrl(desc)) {
+                return ExtractedUrl(
+                    url = desc,
+                    fromKnownAddressBar = false,
+                    isUserEditingAddressBar = false
+                )
+            }
             for (i in 0 until node.childCount) {
                 node.getChild(i)?.let { queue.addLast(it) }
             }
@@ -219,3 +247,9 @@ class BrowserAccessibilityService : AccessibilityService() {
         private val URL_PATTERN = Regex("""^([a-z0-9-]+\.)+[a-z]{2,}([/:?#].*)?$""")
     }
 }
+
+private data class ExtractedUrl(
+    val url: String,
+    val fromKnownAddressBar: Boolean,
+    val isUserEditingAddressBar: Boolean
+)
