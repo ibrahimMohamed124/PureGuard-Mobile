@@ -1,5 +1,6 @@
 package com.pureguard.mobile.domain.engine
 
+import com.pureguard.mobile.features.blocking.data.mapper.ProtectionConstants
 import java.net.URI
 import java.util.Locale
 

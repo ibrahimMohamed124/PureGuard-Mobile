@@ -1,4 +1,4 @@
-package com.pureguard.mobile.core.common
+package com.pureguard.mobile.core.common.base
 
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow

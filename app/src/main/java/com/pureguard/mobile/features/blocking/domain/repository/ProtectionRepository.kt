@@ -1,14 +1,10 @@
-package com.pureguard.mobile.domain
+package com.pureguard.mobile.features.blocking.domain.repository
 
-import com.pureguard.mobile.domain.model.local.ProtectionSettings
-import com.pureguard.mobile.domain.model.local.ProtectionSnapshot
-import com.pureguard.mobile.domain.model.local.SettingsPatch
+import com.pureguard.mobile.features.blocking.domain.model.ProtectionSettings
+import com.pureguard.mobile.features.blocking.domain.model.ProtectionSnapshot
+import com.pureguard.mobile.features.blocking.domain.model.SettingsPatch
+import com.pureguard.mobile.features.blocking.presentation.state.RepoResult
 import kotlinx.coroutines.flow.Flow
-
-sealed class RepoResult {
-    data object Success : RepoResult()
-    data class Error(val message: String) : RepoResult()
-}
 
 interface ProtectionRepository {
     val snapshotFlow: Flow<ProtectionSnapshot>
@@ -24,5 +20,11 @@ interface ProtectionRepository {
     suspend fun resetStats()
     suspend fun bumpBlocked()
     suspend fun bumpScanned()
+    suspend fun bumpSafeSearchRewrite()
+    suspend fun bumpAllowOnce()
+    suspend fun bumpDnsBlocked()
+    suspend fun bumpKeywordBlocked()
+    suspend fun bumpPrivateModeBlocked()
+    suspend fun bumpStrictModeBlocked()
     suspend fun getSettings(): ProtectionSettings
 }

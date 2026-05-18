@@ -1,4 +1,4 @@
-package com.pureguard.mobile.domain.model.local
+package com.pureguard.mobile.features.blocking.domain.model
 
 data class SettingsPatch(
     val enabled: Boolean? = null,
@@ -10,8 +10,7 @@ data class SettingsPatch(
     val strictMode: Boolean? = null,
     val whitelist: List<String>? = null,
     val blacklist: List<String>? = null,
-    val incognitoEnabled: Boolean? = null,
-    val backoff: BackoffConfig? = null
+    val incognitoEnabled: Boolean? = null
 ) {
     fun touchesProtectedFields(): Boolean {
         return listOf(
@@ -24,8 +23,7 @@ data class SettingsPatch(
             strictMode,
             whitelist,
             blacklist,
-            incognitoEnabled,
-            backoff
+            incognitoEnabled
         ).any { it != null }
     }
 }

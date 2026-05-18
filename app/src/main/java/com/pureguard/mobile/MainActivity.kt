@@ -6,8 +6,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import com.pureguard.mobile.ui.AppRoot
-import com.pureguard.mobile.ui.ProtectionViewModel
-import com.pureguard.mobile.ui.ProtectionViewModelFactory
+import com.pureguard.mobile.features.blocking.presentation.viewmodel.ProtectionViewModel
+import com.pureguard.mobile.features.blocking.presentation.viewmodel.ProtectionViewModelFactory
 import com.pureguard.mobile.ui.theme.PureGuardTheme
 
 class MainActivity : ComponentActivity() {

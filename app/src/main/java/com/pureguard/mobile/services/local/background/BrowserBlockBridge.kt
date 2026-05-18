@@ -1,4 +1,4 @@
-package com.pureguard.mobile.services.local.blocking
+package com.pureguard.mobile.services.local.background
 
 import java.net.URI
 import java.util.Locale

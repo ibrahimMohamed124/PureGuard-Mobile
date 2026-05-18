@@ -1,10 +1,10 @@
-package com.pureguard.mobile.ui
+package com.pureguard.mobile.features.blocking.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pureguard.mobile.features.blocking.domain.repository.ProtectionRepository
-import com.pureguard.mobile.features.blocking.domain.repository.RepoResult
 import com.pureguard.mobile.features.blocking.domain.model.SettingsPatch
+import com.pureguard.mobile.features.blocking.presentation.state.RepoResult
 import com.pureguard.mobile.features.blocking.domain.model.ProtectionSnapshot
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

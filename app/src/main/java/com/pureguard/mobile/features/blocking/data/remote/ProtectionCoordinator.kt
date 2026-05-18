@@ -1,6 +1,10 @@
-package com.pureguard.mobile.domain.engine
+package com.pureguard.mobile.features.blocking.data.remote
 
-import com.pureguard.mobile.features.blocking.data.local.UrlScoringEngine
+import com.pureguard.mobile.domain.engine.DnsSafetyChecker
+import com.pureguard.mobile.domain.engine.MetadataAnalyzer
+import com.pureguard.mobile.domain.engine.OnDeviceImageScanner
+import com.pureguard.mobile.domain.engine.SafeSearchRewriter
+import com.pureguard.mobile.domain.engine.UrlScoringEngine
 import com.pureguard.mobile.features.blocking.domain.model.DecisionType
 import com.pureguard.mobile.features.blocking.domain.model.DnsLayerVerdict
 import com.pureguard.mobile.features.blocking.domain.model.LayerVerdict
@@ -38,32 +42,69 @@ class ProtectionCoordinator(
             return NavigationEvaluation(ProtectionDecision(DecisionType.ALLOW, "Allowed once", url))
         }
 
-        if (urlScoringEngine.inList(host, settings.whitelist)) {
-            return NavigationEvaluation(ProtectionDecision(DecisionType.ALLOW, "Whitelisted domain", url))
+        val rewrittenUrl = if (settings.enforceSafeSearch) safeSearchRewriter.rewrite(url) else url
+        val rewrittenHost = host(rewrittenUrl) ?: host
+
+        if (urlScoringEngine.inList(rewrittenHost, settings.whitelist)) {
+            return NavigationEvaluation(
+                ProtectionDecision(
+                    DecisionType.ALLOW,
+                    "Whitelisted domain",
+                    url,
+                    rewrittenUrl = rewrittenUrl.takeIf { it != url }
+                )
+            )
         }
-        if (urlScoringEngine.inList(host, settings.blacklist)) {
-            return NavigationEvaluation(ProtectionDecision(DecisionType.BLOCK, "User blacklist", url))
+        if (urlScoringEngine.inList(rewrittenHost, settings.blacklist)) {
+            return NavigationEvaluation(
+                ProtectionDecision(
+                    DecisionType.BLOCK,
+                    "User blacklist",
+                    url,
+                    rewrittenUrl = rewrittenUrl.takeIf { it != url }
+                )
+            )
         }
-        if (urlScoringEngine.isTrusted(host)) {
-            return NavigationEvaluation(ProtectionDecision(DecisionType.ALLOW, "Trusted domain", url))
+        if (urlScoringEngine.isTrusted(rewrittenHost)) {
+            return NavigationEvaluation(
+                ProtectionDecision(
+                    DecisionType.ALLOW,
+                    "Trusted domain",
+                    url,
+                    rewrittenUrl = rewrittenUrl.takeIf { it != url }
+                )
+            )
         }
 
-        getCachedHostVerdict(host)?.let { cached ->
+        getCachedHostVerdict(rewrittenHost)?.let { cached ->
             if (cached == DecisionType.BLOCK) {
-                return NavigationEvaluation(ProtectionDecision(DecisionType.BLOCK, "Cached flagged domain", url))
+                return NavigationEvaluation(
+                    ProtectionDecision(
+                        DecisionType.BLOCK,
+                        "Cached flagged domain",
+                        url,
+                        rewrittenUrl = rewrittenUrl.takeIf { it != url }
+                    )
+                )
             }
             if (cached == DecisionType.ALLOW) {
-                return NavigationEvaluation(ProtectionDecision(DecisionType.ALLOW, "Cached clean domain", url))
+                return NavigationEvaluation(
+                    ProtectionDecision(
+                        DecisionType.ALLOW,
+                        "Cached clean domain",
+                        url,
+                        rewrittenUrl = rewrittenUrl.takeIf { it != url }
+                    )
+                )
             }
         }
 
-        val rewrittenUrl = if (settings.enforceSafeSearch) safeSearchRewriter.rewrite(url) else url
         val score = urlScoringEngine.score(rewrittenUrl)
-        val dns = dnsForHost(host)
+        val dns = dnsForHost(rewrittenHost)
 
         val dnsBlocked = dns.cloudflare.verdict == LayerVerdict.BLOCK || dns.adguard.verdict == LayerVerdict.BLOCK
         if (dnsBlocked) {
-            setCachedHostVerdict(host, DecisionType.BLOCK)
+            setCachedHostVerdict(rewrittenHost, DecisionType.BLOCK)
             val reason = listOf(dns.cloudflare, dns.adguard)
                 .filter { it.verdict == LayerVerdict.BLOCK }
                 .joinToString(" + ") { it.reason }
@@ -79,7 +120,7 @@ class ProtectionCoordinator(
         }
 
         if (score.score >= settings.sensitivity.urlThreshold) {
-            setCachedHostVerdict(host, DecisionType.BLOCK)
+            setCachedHostVerdict(rewrittenHost, DecisionType.BLOCK)
             return NavigationEvaluation(
                 decision = ProtectionDecision(
                     type = DecisionType.BLOCK,
@@ -105,7 +146,7 @@ class ProtectionCoordinator(
             )
         }
 
-        setCachedHostVerdict(host, DecisionType.ALLOW)
+        setCachedHostVerdict(rewrittenHost, DecisionType.ALLOW)
         return NavigationEvaluation(
             decision = ProtectionDecision(
                 type = DecisionType.ALLOW,

@@ -1,4 +1,6 @@
 package com.pureguard.mobile.features.blocking.presentation.state
 
-class RepoResult {
+sealed class RepoResult {
+    data object Success : RepoResult()
+    data class Error(val message: String) : RepoResult()
 }

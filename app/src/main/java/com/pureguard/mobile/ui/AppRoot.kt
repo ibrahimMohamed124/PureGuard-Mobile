@@ -6,6 +6,7 @@ import android.net.VpnService
 import android.provider.Settings
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -36,11 +37,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.pureguard.mobile.domain.model.SettingsPatch
-import com.pureguard.mobile.services.ProtectionServicesStatus
-import com.pureguard.mobile.services.ServiceVpn
-import com.pureguard.mobile.ui.home.HomeScreen
-import com.pureguard.mobile.ui.settings.SettingsScreen
+import com.pureguard.mobile.features.blocking.domain.model.SettingsPatch
+import com.pureguard.mobile.features.blocking.presentation.viewmodel.ProtectionViewModel
+import com.pureguard.mobile.services.local.background.ProtectionServicesStatus
+import com.pureguard.mobile.services.local.Vpn.ServiceVpn
+import com.pureguard.mobile.ui.features.analytics.AnalyticsScreen
+import com.pureguard.mobile.ui.features.home.HomeScreen
+import com.pureguard.mobile.ui.features.settings.SettingsScreen
 
 private data class NavItem(val route: String, val label: String, val icon: @Composable () -> Unit)
 
@@ -57,11 +60,11 @@ fun AppRoot(
     var vpnNeedsConsent by remember { mutableStateOf(ProtectionServicesStatus.needsVpnConsent(context)) }
     var vpnActive by remember { mutableStateOf(ServiceVpn.isTunnelActive) }
 
-    val refreshStatus = rememberUpdatedState({
+    val refreshStatus = rememberUpdatedState {
         accessibilityEnabled = ProtectionServicesStatus.isAccessibilityEnabled(context)
         vpnNeedsConsent = ProtectionServicesStatus.needsVpnConsent(context)
         vpnActive = ServiceVpn.isTunnelActive
-    })
+    }
 
     val vpnConsentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -84,6 +87,7 @@ fun AppRoot(
 
     val navItems = listOf(
         NavItem("home", "Home", { Icon(Icons.Default.Home, contentDescription = "Home") }),
+        NavItem("analytics", "Analytics", { Icon(Icons.Default.Analytics, contentDescription = "Analytics") }),
         NavItem("settings", "Settings", { Icon(Icons.Default.Settings, contentDescription = "Settings") })
     )
 
@@ -164,6 +168,14 @@ fun AppRoot(
                     onRemovePassword = { password ->
                         protectionViewModel.removePassword(password)
                     }
+                )
+            }
+            composable("analytics") {
+                AnalyticsScreen(
+                    state = protectionState,
+                    accessibilityEnabled = accessibilityEnabled,
+                    vpnActive = vpnActive,
+                    onResetStats = protectionViewModel::resetStats
                 )
             }
         }

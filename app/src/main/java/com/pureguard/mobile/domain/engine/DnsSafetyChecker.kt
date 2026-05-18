@@ -1,8 +1,8 @@
 package com.pureguard.mobile.domain.engine
 
-import com.pureguard.mobile.domain.model.DnsLayerVerdict
-import com.pureguard.mobile.domain.model.LayerResult
-import com.pureguard.mobile.domain.model.LayerVerdict
+import com.pureguard.mobile.features.blocking.domain.model.DnsLayerVerdict
+import com.pureguard.mobile.features.blocking.domain.model.LayerResult
+import com.pureguard.mobile.features.blocking.domain.model.LayerVerdict
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import okhttp3.OkHttpClient

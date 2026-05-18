@@ -3,8 +3,11 @@
     xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"
+        tools:ignore="ForegroundServicesPolicy" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name="com.pureguard.mobile.PureGuardApp"
@@ -28,14 +31,14 @@
         </activity>
 
         <activity
-            android:name="com.pureguard.mobile.services.BlockedContentActivity"
+            android:name="com.pureguard.mobile.features.blocking.presentation.ui.BlockedContentActivity"
             android:excludeFromRecents="true"
             android:exported="false"
             android:launchMode="singleTask"
             android:noHistory="true" />
 
         <service
-            android:name="com.pureguard.mobile.services.ServiceVpn"
+            android:name="com.pureguard.mobile.services.local.Vpn.ServiceVpn"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync"
@@ -46,7 +49,7 @@
         </service>
 
         <service
-            android:name="com.pureguard.mobile.services.BrowserAccessibilityService"
+            android:name="com.pureguard.mobile.services.local.accessibility.BrowserAccessibilityService"
             android:enabled="true"
             android:exported="false"
             android:label="@string/accessibility_service_name"

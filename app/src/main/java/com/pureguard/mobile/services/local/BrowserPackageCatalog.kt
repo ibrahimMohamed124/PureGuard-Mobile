@@ -1,4 +1,4 @@
-package com.pureguard.mobile.services
+package com.pureguard.mobile.services.local
 
 internal object BrowserPackageCatalog {
     private val addressBarsByPackage: Map<String, List<String>> = mapOf(

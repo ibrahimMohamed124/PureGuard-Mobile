@@ -1,4 +1,6 @@
-package com.pureguard.mobile.core.common
+package com.pureguard.mobile.core.common.base
+
+import com.pureguard.mobile.core.common.Resource
 
 abstract class UseCase<in P, out R> {
     suspend operator fun invoke(parameters: P): Resource<R> {

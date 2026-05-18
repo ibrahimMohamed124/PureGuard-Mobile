@@ -1,4 +1,4 @@
-package com.pureguard.mobile.ui.settings
+package com.pureguard.mobile.ui.features.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,18 +19,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.pureguard.mobile.domain.model.BackoffConfig
-import com.pureguard.mobile.domain.model.Sensitivity
-import com.pureguard.mobile.domain.model.SettingsPatch
+import com.pureguard.mobile.features.blocking.domain.model.Sensitivity
+import com.pureguard.mobile.features.blocking.domain.model.SettingsPatch
 import com.pureguard.mobile.ui.GlassCard
-import com.pureguard.mobile.ui.ProtectionUiState
+import com.pureguard.mobile.features.blocking.presentation.viewmodel.ProtectionUiState
 import com.pureguard.mobile.ui.ToggleSettingRow
 import com.pureguard.mobile.ui.theme.PgMuted
 
@@ -56,12 +54,6 @@ fun SettingsScreen(
     var sensitivity by rememberSaveable(settings.sensitivity.name) { mutableStateOf(settings.sensitivity) }
     var whitelistText by rememberSaveable(settings.whitelist.joinToString("\n")) { mutableStateOf(settings.whitelist.joinToString("\n")) }
     var blacklistText by rememberSaveable(settings.blacklist.joinToString("\n")) { mutableStateOf(settings.blacklist.joinToString("\n")) }
-
-    var retries by rememberSaveable(settings.backoff.sendMaxRetries) { mutableStateOf(settings.backoff.sendMaxRetries.toString()) }
-    var baseDelay by rememberSaveable(settings.backoff.sendBaseDelayMs) { mutableStateOf(settings.backoff.sendBaseDelayMs.toString()) }
-    var maxDelay by rememberSaveable(settings.backoff.sendMaxDelayMs) { mutableStateOf(settings.backoff.sendMaxDelayMs.toString()) }
-    var safetyVeil by rememberSaveable(settings.backoff.safetyRevealMs) { mutableStateOf(settings.backoff.safetyRevealMs.toString()) }
-    var failClosedGrace by rememberSaveable(settings.backoff.failClosedGraceMs) { mutableStateOf(settings.backoff.failClosedGraceMs.toString()) }
 
     var unlockPassword by rememberSaveable { mutableStateOf("") }
     var sessionPassword by rememberSaveable { mutableStateOf("") }
@@ -146,15 +138,9 @@ fun SettingsScreen(
                     )
                     ToggleSettingRow(
                         title = "Strict mode",
-                        subtitle = "Aggressive fail-closed behavior",
+                        subtitle = "Block suspicious pages immediately",
                         checked = strictMode,
                         onCheckedChange = { strictMode = it }
-                    )
-                    ToggleSettingRow(
-                        title = "Incognito support flag",
-                        subtitle = "Mirrors extension setting semantics",
-                        checked = incognitoEnabled,
-                        onCheckedChange = { incognitoEnabled = it }
                     )
                 }
             }
@@ -211,36 +197,17 @@ fun SettingsScreen(
         item {
             GlassCard {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Backoff & timing", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    OutlinedTextField(
-                        value = retries,
-                        onValueChange = { retries = it.filter { c -> c.isDigit() } },
-                        label = { Text("Send retries") },
-                        modifier = Modifier.fillMaxWidth()
+                    Text("Privacy controls", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    ToggleSettingRow(
+                        title = "Block private tabs",
+                        subtitle = "Stop browsing in Incognito/Private mode",
+                        checked = incognitoEnabled,
+                        onCheckedChange = { incognitoEnabled = it }
                     )
-                    OutlinedTextField(
-                        value = baseDelay,
-                        onValueChange = { baseDelay = it.filter { c -> c.isDigit() } },
-                        label = { Text("Base delay ms") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = maxDelay,
-                        onValueChange = { maxDelay = it.filter { c -> c.isDigit() } },
-                        label = { Text("Max delay ms") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = safetyVeil,
-                        onValueChange = { safetyVeil = it.filter { c -> c.isDigit() } },
-                        label = { Text("Safety veil ceiling ms") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = failClosedGrace,
-                        onValueChange = { failClosedGrace = it.filter { c -> c.isDigit() } },
-                        label = { Text("Fail-closed grace ms") },
-                        modifier = Modifier.fillMaxWidth()
+                    Text(
+                        "Temporary \"Allow once\" access expires automatically after 15 minutes.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = PgMuted
                     )
                 }
             }
@@ -309,13 +276,6 @@ fun SettingsScreen(
         }
 
         item {
-            val backoff = BackoffConfig(
-                sendMaxRetries = retries.toIntOrNull() ?: settings.backoff.sendMaxRetries,
-                sendBaseDelayMs = baseDelay.toLongOrNull() ?: settings.backoff.sendBaseDelayMs,
-                sendMaxDelayMs = maxDelay.toLongOrNull() ?: settings.backoff.sendMaxDelayMs,
-                safetyRevealMs = safetyVeil.toLongOrNull() ?: settings.backoff.safetyRevealMs,
-                failClosedGraceMs = failClosedGrace.toLongOrNull() ?: settings.backoff.failClosedGraceMs
-            )
             val patch = SettingsPatch(
                 enabled = enabled,
                 sensitivity = sensitivity,
@@ -326,8 +286,7 @@ fun SettingsScreen(
                 strictMode = strictMode,
                 whitelist = whitelistText.lines().map { it.trim().lowercase() }.filter { it.isNotBlank() },
                 blacklist = blacklistText.lines().map { it.trim().lowercase() }.filter { it.isNotBlank() },
-                incognitoEnabled = incognitoEnabled,
-                backoff = backoff
+                incognitoEnabled = incognitoEnabled
             )
             Button(
                 onClick = {

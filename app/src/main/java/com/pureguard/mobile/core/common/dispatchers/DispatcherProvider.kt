@@ -1,4 +1,4 @@
-package com.pureguard.mobile.core.common
+package com.pureguard.mobile.core.common.dispatchers
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers

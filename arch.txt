@@ -1,0 +1,43 @@
+SafeGuard/
+├── buildSrc/                       # Dependency Management (Kotlin DSL)
+├── app/                            # Entry Point (Application Class, Global NavHost)
+│
+├── core/                           # The Foundation (Independent Modules)
+│   ├── common/                     # Extensions, Result wrappers, Base classes
+│   ├── designsystem/               # Compose Themes, Components, Icons
+│   ├── network/                    # Retrofit, OkHttp, Interceptors
+│   ├── database/                   # Room DB, DAOs, Entities
+│   ├── datastore/                  # User Preferences, Session tokens
+│   ├── security/                   # Crypto, Biometrics, Root Detection
+│   ├── navigation/                 # Shared Routes, NavControllers
+│   └── analytics/                  # Logging, Firebase Analytics
+│
+├── features/                       # Business Logic (Feature-based Modules)
+│   ├── auth/                       # Login, Register, Forgot Password
+│   ├── recovery/                   # Addiction Recovery Mode logic
+│   ├── parental/                   # Parental Control Mode logic
+│   ├── blocking/                   # App & Web blocking logic
+│   ├── ai-assistant/               # LLM Integration, Risk Analysis
+│   └── subscription/               # In-App Purchases, Billing
+│
+├── services/                       # Heavy Background Work
+│   ├── vpn/                        # VpnService Implementation
+│   ├── accessibility/              # AccessibilityService (App Monitoring)
+│   └── background/                 # WorkManager, Forensic workers
+│
+└── domain/                         # Global Business Models (Optional: can be per feature)
+
+feature-x/
+├── presentation/
+│   ├── ui/                 # Compose Screens & Components
+│   ├── viewmodel/          # MVI/MVVM ViewModel
+│   └── state/              # UI State & Intent/Events
+├── domain/
+│   ├── model/              # Pure Kotlin Entities
+│   ├── repository/         # Repository Interfaces
+│   └── usecase/            # Single Responsibility logic
+└── data/
+    ├── repository/         # Repository Implementation
+    ├── remote/             # API Interfaces & DTOs
+    ├── local/              # Local Mapping
+    └── mapper/             # Data Transformers (DTO to Domain)

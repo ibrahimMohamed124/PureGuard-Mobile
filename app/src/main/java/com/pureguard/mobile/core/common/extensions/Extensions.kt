@@ -1,10 +1,9 @@
-package com.pureguard.mobile.core.common
+package com.pureguard.mobile.core.common.extensions
 
 import android.Manifest
 import android.accessibilityservice.AccessibilityService
 import android.annotation.SuppressLint
 import android.app.AppOpsManager
-import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -12,6 +11,7 @@ import android.net.ConnectivityManager
 import android.net.VpnService
 import android.os.Build
 import android.os.PowerManager
+import android.os.Process
 import android.provider.Settings
 import android.widget.Toast
 import androidx.annotation.RequiresPermission
@@ -29,12 +29,14 @@ import java.util.Locale
 /*                                  PERMISSION                                */
 /* -------------------------------------------------------------------------- */
 
+@Suppress("unused")
 fun Context.hasPermission(permission: String): Boolean =
     ContextCompat.checkSelfPermission(
         this,
         permission
     ) == PackageManager.PERMISSION_GRANTED
 
+@Suppress("unused")
 fun Context.isAccessibilityEnabled(
     service: Class<out AccessibilityService>
 ): Boolean {
@@ -49,19 +51,20 @@ fun Context.isAccessibilityEnabled(
         .contains(expected.lowercase(Locale.getDefault()))
 }
 
+@Suppress("unused")
 fun Context.hasUsageStatsPermission(): Boolean {
     val appOps = getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
 
     val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         appOps.unsafeCheckOpNoThrow(
             AppOpsManager.OPSTR_GET_USAGE_STATS,
-            android.os.Process.myUid(),
+            Process.myUid(),
             packageName
         )
     } else {
         appOps.checkOpNoThrow(
             AppOpsManager.OPSTR_GET_USAGE_STATS,
-            android.os.Process.myUid(),
+            Process.myUid(),
             packageName
         )
     }
@@ -69,15 +72,18 @@ fun Context.hasUsageStatsPermission(): Boolean {
     return mode == AppOpsManager.MODE_ALLOWED
 }
 
+@Suppress("unused")
 fun Context.canDrawOverlays(): Boolean =
     Settings.canDrawOverlays(this)
 
+@Suppress("unused")
 fun Context.isIgnoringBatteryOptimizations(): Boolean {
     val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
 
     return powerManager.isIgnoringBatteryOptimizations(packageName)
 }
 
+@Suppress("unused")
 fun Context.isVpnPrepared(): Boolean =
     VpnService.prepare(this) == null
 
@@ -85,6 +91,7 @@ fun Context.isVpnPrepared(): Boolean =
 /*                                   SETTINGS                                 */
 /* -------------------------------------------------------------------------- */
 
+@Suppress("unused")
 fun Context.openAccessibilitySettings() {
     startActivity(
         Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
@@ -92,6 +99,7 @@ fun Context.openAccessibilitySettings() {
     )
 }
 
+@Suppress("unused")
 fun Context.openOverlaySettings() {
     startActivity(
         Intent(
@@ -100,6 +108,7 @@ fun Context.openOverlaySettings() {
     )
 }
 
+@Suppress("unused")
 fun Context.openUsageAccessSettings() {
     startActivity(
         Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
@@ -107,6 +116,7 @@ fun Context.openUsageAccessSettings() {
     )
 }
 
+@Suppress("unused")
 fun Context.openBatteryOptimizationSettings() {
     startActivity(
         Intent(
@@ -115,6 +125,7 @@ fun Context.openBatteryOptimizationSettings() {
     )
 }
 
+@Suppress("unused")
 fun Context.openVpnSettings() {
     startActivity(
         Intent(Settings.ACTION_VPN_SETTINGS)
@@ -126,6 +137,7 @@ fun Context.openVpnSettings() {
 /*                                     APPS                                   */
 /* -------------------------------------------------------------------------- */
 
+@Suppress("unused")
 fun Context.isPackageInstalled(packageName: String): Boolean {
     return try {
         packageManager.getPackageInfo(packageName, 0)
@@ -135,12 +147,14 @@ fun Context.isPackageInstalled(packageName: String): Boolean {
     }
 }
 
+@Suppress("unused")
 @SuppressLint("QueryPermissionsNeeded")
 fun Context.getInstalledApps(): List<String> {
     return packageManager.getInstalledApplications(0)
         .map { it.packageName }
 }
 
+@Suppress("unused")
 fun Context.getAppName(packageName: String): String {
     return try {
         val appInfo = packageManager.getApplicationInfo(packageName, 0)
@@ -153,7 +167,7 @@ fun Context.getAppName(packageName: String): String {
 /* -------------------------------------------------------------------------- */
 /*                                   NETWORK                                  */
 /* -------------------------------------------------------------------------- */
-
+@Suppress("unused")
 @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
 fun Context.isInternetAvailable(): Boolean {
     val connectivityManager =
@@ -167,6 +181,7 @@ fun Context.isInternetAvailable(): Boolean {
 /*                                     TOAST                                  */
 /* -------------------------------------------------------------------------- */
 
+@Suppress("unused")
 fun Context.showToast(message: String) {
     Toast.makeText(
         this,
@@ -179,6 +194,7 @@ fun Context.showToast(message: String) {
 /*                                     FLOW                                   */
 /* -------------------------------------------------------------------------- */
 
+@Suppress("unused")
 @Composable
 fun <T> Flow<T>.observeAsState(initial: T): State<T> {
     val lifecycleOwner = LocalLifecycleOwner.current

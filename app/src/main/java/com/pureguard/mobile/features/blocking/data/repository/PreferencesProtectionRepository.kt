@@ -1,15 +1,16 @@
-package com.pureguard.mobile.data.prefs
+package com.pureguard.mobile.features.blocking.data.repository
 
 import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
 import com.pureguard.mobile.core.security.PasswordHasher
 import com.pureguard.mobile.core.security.PasswordRecord
 import com.pureguard.mobile.core.security.UnlockSessionManager
+import com.pureguard.mobile.features.blocking.data.mapper.PreferenceKeys
 import com.pureguard.mobile.features.blocking.domain.repository.ProtectionRepository
-import com.pureguard.mobile.features.blocking.domain.repository.RepoResult
 import com.pureguard.mobile.features.blocking.domain.model.BackoffConfig
 import com.pureguard.mobile.features.blocking.domain.model.LockState
 import com.pureguard.mobile.features.blocking.domain.model.ProtectionSettings
@@ -17,6 +18,7 @@ import com.pureguard.mobile.features.blocking.domain.model.ProtectionSnapshot
 import com.pureguard.mobile.features.blocking.domain.model.ProtectionStats
 import com.pureguard.mobile.features.blocking.domain.model.Sensitivity
 import com.pureguard.mobile.features.blocking.domain.model.SettingsPatch
+import com.pureguard.mobile.features.blocking.presentation.state.RepoResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -36,7 +38,13 @@ class PreferencesProtectionRepository(
         val settings = prefs.toSettings()
         val stats = ProtectionStats(
             blockedCount = prefs[PreferenceKeys.BlockedCount] ?: 0,
-            scannedCount = prefs[PreferenceKeys.ScannedCount] ?: 0
+            scannedCount = prefs[PreferenceKeys.ScannedCount] ?: 0,
+            safeSearchRewriteCount = prefs[PreferenceKeys.SafeSearchRewriteCount] ?: 0,
+            allowOnceCount = prefs[PreferenceKeys.AllowOnceCount] ?: 0,
+            dnsBlockedCount = prefs[PreferenceKeys.DnsBlockedCount] ?: 0,
+            keywordBlockedCount = prefs[PreferenceKeys.KeywordBlockedCount] ?: 0,
+            privateModeBlockedCount = prefs[PreferenceKeys.PrivateModeBlockedCount] ?: 0,
+            strictModeBlockedCount = prefs[PreferenceKeys.StrictModeBlockedCount] ?: 0
         )
         val hasPassword = !prefs[PreferenceKeys.PasswordHash].isNullOrBlank()
         val lockEnabled = prefs[PreferenceKeys.LockEnabled] ?: false
@@ -52,6 +60,7 @@ class PreferencesProtectionRepository(
 
     override suspend fun getSettings(): ProtectionSettings = getSnapshot().settings
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override suspend fun updateSettings(patch: SettingsPatch, password: String?): RepoResult {
         val snapshot = getSnapshot()
         if (snapshot.lockState.lockEnabled && patch.touchesProtectedFields()) {
@@ -78,12 +87,6 @@ class PreferencesProtectionRepository(
             prefs[PreferenceKeys.Whitelist] = merged.whitelist.joinToString("\n")
             prefs[PreferenceKeys.Blacklist] = merged.blacklist.joinToString("\n")
             prefs[PreferenceKeys.IncognitoEnabled] = merged.incognitoEnabled
-
-            prefs[PreferenceKeys.BackoffRetries] = merged.backoff.sendMaxRetries.coerceIn(1, 20)
-            prefs[PreferenceKeys.BackoffBaseDelay] = merged.backoff.sendBaseDelayMs.coerceIn(50, 2000)
-            prefs[PreferenceKeys.BackoffMaxDelay] = merged.backoff.sendMaxDelayMs.coerceIn(200, 10_000)
-            prefs[PreferenceKeys.BackoffSafetyReveal] = merged.backoff.safetyRevealMs.coerceIn(2000, 30_000)
-            prefs[PreferenceKeys.BackoffFailClosedGrace] = merged.backoff.failClosedGraceMs.coerceIn(0, 10_000)
         }
         return RepoResult.Success
     }
@@ -110,6 +113,7 @@ class PreferencesProtectionRepository(
         return RepoResult.Success
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override suspend fun removePassword(password: String): RepoResult {
         val record = readPasswordRecord() ?: return RepoResult.Success
         if (!hasher.verify(password, record)) return RepoResult.Error("Wrong password")
@@ -123,6 +127,7 @@ class PreferencesProtectionRepository(
         return RepoResult.Success
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override suspend fun verifyPassword(password: String): Boolean {
         val record = readPasswordRecord() ?: run {
             unlockSessionManager.grantUnlock()
@@ -135,6 +140,7 @@ class PreferencesProtectionRepository(
 
     override suspend fun allowHostOnce(host: String) {
         oneTimeAllowHosts[host.normalizedHost()] = System.currentTimeMillis() + allowTtlMs
+        bumpAllowOnce()
     }
 
     override suspend fun isHostAllowedOnce(host: String): Boolean {
@@ -155,20 +161,51 @@ class PreferencesProtectionRepository(
         context.dataStore.edit { prefs ->
             prefs[PreferenceKeys.BlockedCount] = 0
             prefs[PreferenceKeys.ScannedCount] = 0
+            prefs[PreferenceKeys.SafeSearchRewriteCount] = 0
+            prefs[PreferenceKeys.AllowOnceCount] = 0
+            prefs[PreferenceKeys.DnsBlockedCount] = 0
+            prefs[PreferenceKeys.KeywordBlockedCount] = 0
+            prefs[PreferenceKeys.PrivateModeBlockedCount] = 0
+            prefs[PreferenceKeys.StrictModeBlockedCount] = 0
         }
     }
 
     override suspend fun bumpBlocked() {
-        context.dataStore.edit { prefs ->
-            val current = prefs[PreferenceKeys.BlockedCount] ?: 0
-            prefs[PreferenceKeys.BlockedCount] = current + 1
-        }
+        incrementStat(PreferenceKeys.BlockedCount)
     }
 
     override suspend fun bumpScanned() {
+        incrementStat(PreferenceKeys.ScannedCount)
+    }
+
+    override suspend fun bumpSafeSearchRewrite() {
+        incrementStat(PreferenceKeys.SafeSearchRewriteCount)
+    }
+
+    override suspend fun bumpAllowOnce() {
+        incrementStat(PreferenceKeys.AllowOnceCount)
+    }
+
+    override suspend fun bumpDnsBlocked() {
+        incrementStat(PreferenceKeys.DnsBlockedCount)
+    }
+
+    override suspend fun bumpKeywordBlocked() {
+        incrementStat(PreferenceKeys.KeywordBlockedCount)
+    }
+
+    override suspend fun bumpPrivateModeBlocked() {
+        incrementStat(PreferenceKeys.PrivateModeBlockedCount)
+    }
+
+    override suspend fun bumpStrictModeBlocked() {
+        incrementStat(PreferenceKeys.StrictModeBlockedCount)
+    }
+
+    private suspend fun incrementStat(key: Preferences.Key<Int>) {
         context.dataStore.edit { prefs ->
-            val current = prefs[PreferenceKeys.ScannedCount] ?: 0
-            prefs[PreferenceKeys.ScannedCount] = current + 1
+            val current = prefs[key] ?: 0
+            prefs[key] = current + 1
         }
     }
 
@@ -184,7 +221,15 @@ class PreferencesProtectionRepository(
 
 private fun String.normalizedHost(): String = trim().lowercase()
 
-private fun androidx.datastore.preferences.core.Preferences.toSettings(): ProtectionSettings {
+private val InternalBackoffConfig = BackoffConfig(
+    sendMaxRetries = 8,
+    sendBaseDelayMs = 150,
+    sendMaxDelayMs = 1500,
+    safetyRevealMs = 8000,
+    failClosedGraceMs = 1500
+)
+
+private fun Preferences.toSettings(): ProtectionSettings {
     val sensitivity = runCatching {
         Sensitivity.valueOf(this[PreferenceKeys.Sensitivity] ?: Sensitivity.HIGH.name)
     }.getOrDefault(Sensitivity.HIGH)
@@ -200,13 +245,7 @@ private fun androidx.datastore.preferences.core.Preferences.toSettings(): Protec
         whitelist = this[PreferenceKeys.Whitelist].toDomainList(),
         blacklist = this[PreferenceKeys.Blacklist].toDomainList(),
         incognitoEnabled = this[PreferenceKeys.IncognitoEnabled] ?: false,
-        backoff = BackoffConfig(
-            sendMaxRetries = (this[PreferenceKeys.BackoffRetries] ?: 8).coerceIn(1, 20),
-            sendBaseDelayMs = (this[PreferenceKeys.BackoffBaseDelay] ?: 150).coerceIn(50, 2000),
-            sendMaxDelayMs = (this[PreferenceKeys.BackoffMaxDelay] ?: 1500).coerceIn(200, 10_000),
-            safetyRevealMs = (this[PreferenceKeys.BackoffSafetyReveal] ?: 8000).coerceIn(2000, 30_000),
-            failClosedGraceMs = (this[PreferenceKeys.BackoffFailClosedGrace] ?: 1500).coerceIn(0, 10_000)
-        )
+        backoff = InternalBackoffConfig
     )
 }
 
@@ -221,8 +260,7 @@ private fun ProtectionSettings.merge(patch: SettingsPatch): ProtectionSettings {
         strictMode = patch.strictMode ?: strictMode,
         whitelist = patch.whitelist ?: whitelist,
         blacklist = patch.blacklist ?: blacklist,
-        incognitoEnabled = patch.incognitoEnabled ?: incognitoEnabled,
-        backoff = patch.backoff ?: backoff
+        incognitoEnabled = patch.incognitoEnabled ?: incognitoEnabled
     )
 }
 

@@ -1,4 +1,4 @@
-package com.pureguard.mobile.domain.model.local
+package com.pureguard.mobile.features.blocking.domain.model
 
 enum class LayerVerdict {
     ALLOW,

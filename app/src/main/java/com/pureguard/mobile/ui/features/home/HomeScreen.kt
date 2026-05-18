@@ -1,4 +1,4 @@
-package com.pureguard.mobile.ui.home
+package com.pureguard.mobile.ui.features.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,10 +18,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.pureguard.mobile.domain.model.Sensitivity
-import com.pureguard.mobile.domain.model.SettingsPatch
+import com.pureguard.mobile.features.blocking.domain.model.Sensitivity
+import com.pureguard.mobile.features.blocking.domain.model.SettingsPatch
 import com.pureguard.mobile.ui.GlassCard
-import com.pureguard.mobile.ui.ProtectionUiState
+import com.pureguard.mobile.features.blocking.presentation.viewmodel.ProtectionUiState
 import com.pureguard.mobile.ui.ToggleSettingRow
 import com.pureguard.mobile.ui.theme.PgAccentBlue
 import com.pureguard.mobile.ui.theme.PgMuted

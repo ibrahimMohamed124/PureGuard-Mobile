@@ -1,4 +1,4 @@
-package com.pureguard.mobile.ui
+package com.pureguard.mobile.features.blocking.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider

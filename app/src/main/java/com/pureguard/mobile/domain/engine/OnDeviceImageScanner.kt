@@ -2,7 +2,8 @@ package com.pureguard.mobile.domain.engine
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import com.pureguard.mobile.domain.model.Sensitivity
+import com.pureguard.mobile.features.blocking.data.mapper.ProtectionConstants
+import com.pureguard.mobile.features.blocking.domain.model.Sensitivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
