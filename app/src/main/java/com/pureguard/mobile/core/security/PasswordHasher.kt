@@ -1,6 +1,5 @@
 package com.pureguard.mobile.core.security
 
-import android.annotation.TargetApi
 import android.os.Build
 import androidx.annotation.RequiresApi
 import java.security.SecureRandom
@@ -17,8 +16,7 @@ data class PasswordRecord(
 class PasswordHasher {
     private val random = SecureRandom()
 
-    @TargetApi(Build.VERSION_CODES.O)
-    @androidx.annotation.RequiresApi(Build.VERSION_CODES.O)
+    @RequiresApi(Build.VERSION_CODES.O)
     fun create(password: String, iterations: Int = 150_000): PasswordRecord {
         val saltBytes = ByteArray(16).also(random::nextBytes)
         val hashBytes = hash(password, saltBytes, iterations)
@@ -29,7 +27,6 @@ class PasswordHasher {
         )
     }
 
-    @TargetApi(Build.VERSION_CODES.O)
     @RequiresApi(Build.VERSION_CODES.O)
     fun verify(password: String, record: PasswordRecord): Boolean {
         val saltBytes = Base64.getDecoder().decode(record.salt)

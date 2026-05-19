@@ -4,7 +4,15 @@ import android.app.Activity
 import android.content.Intent
 import android.net.VpnService
 import android.provider.Settings
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Home
@@ -24,8 +32,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -37,15 +45,24 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.pureguard.mobile.core.datastore.Prefs
 import com.pureguard.mobile.features.blocking.domain.model.SettingsPatch
+import com.pureguard.mobile.features.blocking.presentation.viewmodel.ProtectionUiState
 import com.pureguard.mobile.features.blocking.presentation.viewmodel.ProtectionViewModel
 import com.pureguard.mobile.services.local.background.ProtectionServicesStatus
 import com.pureguard.mobile.services.local.Vpn.ServiceVpn
 import com.pureguard.mobile.ui.features.analytics.AnalyticsScreen
 import com.pureguard.mobile.ui.features.home.HomeScreen
+import com.pureguard.mobile.ui.features.onboarding.OnboardingScreen
+import com.pureguard.mobile.ui.features.onboarding.PermissionSetupScreen
 import com.pureguard.mobile.ui.features.settings.SettingsScreen
 
+private const val PREF_ONBOARDING_DONE = "onboarding_complete"
+private const val PREF_PERMISSIONS_SEEN = "permissions_seen"
+
 private data class NavItem(val route: String, val label: String, val icon: @Composable () -> Unit)
+
+private enum class AppFlow { ONBOARDING, PERMISSIONS, MAIN }
 
 @Composable
 fun AppRoot(
@@ -56,9 +73,23 @@ fun AppRoot(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val snackbarHost = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+
     var accessibilityEnabled by remember { mutableStateOf(ProtectionServicesStatus.isAccessibilityEnabled(context)) }
     var vpnNeedsConsent by remember { mutableStateOf(ProtectionServicesStatus.needsVpnConsent(context)) }
     var vpnActive by remember { mutableStateOf(ServiceVpn.isTunnelActive) }
+
+    var currentFlow by remember {
+        val onboardingDone = Prefs.getBoolean(PREF_ONBOARDING_DONE, false)
+        val permissionsSeen = Prefs.getBoolean(PREF_PERMISSIONS_SEEN, false)
+        mutableStateOf(
+            when {
+                !onboardingDone -> AppFlow.ONBOARDING
+                !permissionsSeen -> AppFlow.PERMISSIONS
+                else -> AppFlow.MAIN
+            }
+        )
+    }
 
     val refreshStatus = rememberUpdatedState {
         accessibilityEnabled = ProtectionServicesStatus.isAccessibilityEnabled(context)
@@ -73,6 +104,12 @@ fun AppRoot(
             ServiceVpn.start(context)
         }
         refreshStatus.value()
+        coroutineScope.launch {
+            delay(600)
+            refreshStatus.value()
+            delay(1200)
+            refreshStatus.value()
+        }
     }
 
     DisposableEffect(lifecycleOwner) {
@@ -85,18 +122,106 @@ fun AppRoot(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val navItems = listOf(
-        NavItem("home", "Home", { Icon(Icons.Default.Home, contentDescription = "Home") }),
-        NavItem("analytics", "Analytics", { Icon(Icons.Default.Analytics, contentDescription = "Analytics") }),
-        NavItem("settings", "Settings", { Icon(Icons.Default.Settings, contentDescription = "Settings") })
-    )
-
     LaunchedEffect(protectionState.toastMessage) {
         protectionState.toastMessage?.let {
             snackbarHost.showSnackbar(it)
             protectionViewModel.consumeToast()
         }
     }
+
+    AnimatedContent(
+        targetState = currentFlow,
+        transitionSpec = { fadeIn(tween(450)) togetherWith fadeOut(tween(300)) },
+        label = "app_flow"
+    ) { flow ->
+        when (flow) {
+            AppFlow.ONBOARDING -> {
+                OnboardingScreen(
+                    onFinished = {
+                        Prefs.putBoolean(PREF_ONBOARDING_DONE, true)
+                        currentFlow = AppFlow.PERMISSIONS
+                    }
+                )
+            }
+
+            AppFlow.PERMISSIONS -> {
+                PermissionSetupScreen(
+                    accessibilityEnabled = accessibilityEnabled,
+                    vpnActive = vpnActive,
+                    vpnNeedsConsent = vpnNeedsConsent,
+                    onEnableAccessibility = {
+                        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(intent)
+                    },
+                    onEnableVpn = {
+                        val prepareIntent = VpnService.prepare(context)
+                        if (prepareIntent != null) {
+                            vpnConsentLauncher.launch(prepareIntent)
+                        } else {
+                            ServiceVpn.start(context)
+                            refreshStatus.value()
+                        }
+                    },
+                    onContinue = {
+                        Prefs.putBoolean(PREF_PERMISSIONS_SEEN, true)
+                        currentFlow = AppFlow.MAIN
+                    }
+                )
+            }
+
+            AppFlow.MAIN -> {
+                MainAppScaffold(
+                    protectionViewModel = protectionViewModel,
+                    protectionState = protectionState,
+                    navController = navController,
+                    snackbarHost = snackbarHost,
+                    accessibilityEnabled = accessibilityEnabled,
+                    vpnActive = vpnActive,
+                    vpnNeedsConsent = vpnNeedsConsent,
+                    onOpenAccessibilitySettings = {
+                        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(intent)
+                    },
+                    onToggleVpn = {
+                        if (ServiceVpn.isTunnelActive) {
+                            ServiceVpn.stop(context)
+                        } else {
+                            val prepareIntent = VpnService.prepare(context)
+                            if (prepareIntent != null) {
+                                vpnConsentLauncher.launch(prepareIntent)
+                            } else {
+                                ServiceVpn.start(context)
+                            }
+                        }
+                        refreshStatus.value()
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MainAppScaffold(
+    protectionViewModel: ProtectionViewModel,
+    protectionState: ProtectionUiState,
+    navController: androidx.navigation.NavHostController,
+    snackbarHost: SnackbarHostState,
+    accessibilityEnabled: Boolean,
+    vpnActive: Boolean,
+    vpnNeedsConsent: Boolean,
+    onOpenAccessibilitySettings: () -> Unit,
+    onToggleVpn: () -> Unit
+) {
+    val navItems = listOf(
+        NavItem("home", "Home", { Icon(Icons.Default.Home, contentDescription = "Home") }),
+        NavItem("analytics", "Analytics", { Icon(Icons.Default.Analytics, contentDescription = "Analytics") }),
+        NavItem("settings", "Settings", { Icon(Icons.Default.Settings, contentDescription = "Settings") })
+    )
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHost) },
@@ -134,25 +259,8 @@ fun AppRoot(
                     accessibilityEnabled = accessibilityEnabled,
                     vpnActive = vpnActive,
                     vpnNeedsConsent = vpnNeedsConsent,
-                    onOpenAccessibilitySettings = {
-                        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        context.startActivity(intent)
-                    },
-                    onToggleVpn = {
-                        if (ServiceVpn.isTunnelActive) {
-                            ServiceVpn.stop(context)
-                        } else {
-                            val prepareIntent = VpnService.prepare(context)
-                            if (prepareIntent != null) {
-                                vpnConsentLauncher.launch(prepareIntent)
-                            } else {
-                                ServiceVpn.start(context)
-                            }
-                        }
-                        refreshStatus.value()
-                    },
+                    onOpenAccessibilitySettings = onOpenAccessibilitySettings,
+                    onToggleVpn = onToggleVpn,
                     onPatch = { patch: SettingsPatch -> protectionViewModel.updateSettings(patch) },
                     onResetStats = protectionViewModel::resetStats
                 )
@@ -174,6 +282,7 @@ fun AppRoot(
                 AnalyticsScreen(
                     state = protectionState,
                     accessibilityEnabled = accessibilityEnabled,
+                    vpnNeedsConsent = vpnNeedsConsent,
                     vpnActive = vpnActive,
                     onResetStats = protectionViewModel::resetStats
                 )
