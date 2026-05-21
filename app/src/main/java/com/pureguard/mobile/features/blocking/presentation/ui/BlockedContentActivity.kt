@@ -8,12 +8,15 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
@@ -22,6 +25,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
@@ -30,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -39,10 +44,11 @@ import androidx.core.net.toUri
 import com.pureguard.mobile.PureGuardApp
 import com.pureguard.mobile.services.local.Vpn.ServiceVpn
 import com.pureguard.mobile.services.local.background.BrowserBlockBridge
-import com.pureguard.mobile.ui.GlassCard
 import com.pureguard.mobile.ui.GradientBackground
+import com.pureguard.mobile.ui.theme.PgAccentBlue
 import com.pureguard.mobile.ui.theme.PgDanger
 import com.pureguard.mobile.ui.theme.PgMuted
+import com.pureguard.mobile.ui.theme.PgText
 import com.pureguard.mobile.ui.theme.PureGuardTheme
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -80,7 +86,13 @@ class BlockedContentActivity : ComponentActivity() {
                             .padding(16.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        GlassCard(modifier = Modifier.fillMaxWidth()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(Color.White.copy(0.04f))
+                                .border(1.dp, Color.White.copy(0.08f), RoundedCornerShape(20.dp))
+                        ) {
                             Column(
                                 modifier = Modifier.padding(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -95,6 +107,7 @@ class BlockedContentActivity : ComponentActivity() {
                                     text = "Page Blocked",
                                     style = MaterialTheme.typography.headlineSmall,
                                     fontWeight = FontWeight.Bold,
+                                    color = PgText,
                                     modifier = Modifier.align(Alignment.CenterHorizontally)
                                 )
                                 Text(
@@ -102,15 +115,16 @@ class BlockedContentActivity : ComponentActivity() {
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = PgMuted
                                 )
-                                HorizontalDivider(color = Color.White.copy(alpha = 0.14f))
+                                HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
                                 Text(
                                     text = "Reason",
                                     style = MaterialTheme.typography.labelLarge,
-                                    color = PgDanger
+                                    color = PgAccentBlue
                                 )
                                 Text(
                                     text = blockedReason.ifBlank { "Suspicious content detected." },
-                                    style = MaterialTheme.typography.bodySmall
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = PgText
                                 )
                                 Text(
                                     text = "URL",
@@ -120,16 +134,25 @@ class BlockedContentActivity : ComponentActivity() {
                                 Text(
                                     text = blockedUrl,
                                     style = MaterialTheme.typography.bodySmall,
+                                    color = PgText,
                                     maxLines = 3,
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 OutlinedTextField(
                                     value = password,
                                     onValueChange = { password = it },
-                                    label = { Text("Password (if lock is enabled)") },
+                                    label = { Text("Password (if lock is enabled)", color = PgMuted) },
                                     modifier = Modifier.fillMaxWidth(),
                                     visualTransformation = PasswordVisualTransformation(),
-                                    enabled = !submitting
+                                    enabled = !submitting,
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = PgAccentBlue,
+                                        unfocusedBorderColor = Color.White.copy(0.12f),
+                                        focusedTextColor = PgText,
+                                        unfocusedTextColor = PgText,
+                                        disabledTextColor = PgMuted,
+                                        disabledBorderColor = Color.White.copy(0.06f)
+                                    )
                                 )
                                 if (status.isNotBlank()) {
                                     Text(
@@ -140,28 +163,23 @@ class BlockedContentActivity : ComponentActivity() {
                                 }
                                 Button(
                                     onClick = {
-                                        if (submitting) return@Button
-                                        submitting = true
-                                        status = ""
-                                        allowOnce(
+                                        handleAllowOnce(
+                                            submitting = submitting,
+                                            setSubmitting = { submitting = it },
+                                            setStatus = { status = it },
                                             blockedUrl = blockedUrl,
                                             browserPackage = browserPackage,
                                             password = password
-                                        ) { ok, message ->
-                                            submitting = false
-                                            if (!ok) {
-                                                status = message
-                                            } else {
-                                                openInDefaultBrowser(blockedUrl)
-                                                finish()
-                                            }
-                                        }
+                                        )
                                     },
                                     modifier = Modifier.fillMaxWidth(),
                                     enabled = !submitting,
-                                    colors = ButtonDefaults.buttonColors(containerColor = PgDanger)
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = PgDanger,
+                                        disabledContainerColor = Color.White.copy(0.07f)
+                                    )
                                 ) {
-                                    Text("Allow once")
+                                    Text("Allow once", color = Color(0xFF0A0F1E))
                                 }
                                 TextButton(
                                     onClick = {
@@ -173,7 +191,7 @@ class BlockedContentActivity : ComponentActivity() {
                                     modifier = Modifier.fillMaxWidth(),
                                     enabled = !submitting
                                 ) {
-                                    Text("Stay protected")
+                                    Text("Stay protected", color = PgAccentBlue)
                                 }
                             }
                         }
@@ -203,6 +221,37 @@ class BlockedContentActivity : ComponentActivity() {
     override fun onDestroy() {
         scope.cancel()
         super.onDestroy()
+    }
+
+    private fun handleAllowOnce(
+        submitting: Boolean,
+        setSubmitting: (Boolean) -> Unit,
+        setStatus: (String) -> Unit,
+        blockedUrl: String,
+        browserPackage: String,
+        password: String
+    ) {
+
+        if (submitting) return
+
+        setSubmitting(true)
+        setStatus("")
+
+        allowOnce(
+            blockedUrl = blockedUrl,
+            browserPackage = browserPackage,
+            password = password
+        ) { ok, message ->
+
+            setSubmitting(false)
+
+            if (!ok) {
+                setStatus(message)
+            } else {
+                openInDefaultBrowser(blockedUrl)
+                finish()
+            }
+        }
     }
 
     private fun allowOnce(

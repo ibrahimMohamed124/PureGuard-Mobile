@@ -68,10 +68,10 @@ class UrlScoringEngine {
     }
 
     fun inList(host: String, list: List<String>): Boolean {
-        val normalized = host.lowercase(Locale.US)
+        val normalized = host.trim().lowercase(Locale.US).trim('.')
         return list.any { entry ->
-            val e = entry.trim().lowercase(Locale.US)
-            e.isNotBlank() && (normalized == e || normalized.endsWith(".$e"))
+            val e = normalizeDomainEntry(entry) ?: return@any false
+            normalized == e || normalized.endsWith(".$e")
         }
     }
 
@@ -80,5 +80,23 @@ class UrlScoringEngine {
         return ProtectionConstants.trustedDomains.any { t ->
             normalized == t || normalized.endsWith(".$t")
         }
+    }
+
+    private fun normalizeDomainEntry(raw: String): String? {
+        var cleaned = raw.trim().lowercase(Locale.US)
+        if (cleaned.isBlank()) return null
+
+        cleaned = cleaned
+            .removePrefix("https://")
+            .removePrefix("http://")
+            .substringBefore("/")
+            .substringBefore("?")
+            .substringBefore("#")
+            .substringBefore(":")
+            .trim('.')
+
+        cleaned = cleaned.removePrefix("www.").removePrefix("*.").removePrefix(".")
+        if (cleaned.isBlank() || !cleaned.contains('.')) return null
+        return cleaned
     }
 }

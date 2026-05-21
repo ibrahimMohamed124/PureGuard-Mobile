@@ -22,6 +22,7 @@ import com.pureguard.mobile.features.blocking.presentation.state.RepoResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import java.util.Locale
 
 private val Context.dataStore by preferencesDataStore(name = "pureguard_settings")
 
@@ -219,7 +220,7 @@ class PreferencesProtectionRepository(
     }
 }
 
-private fun String.normalizedHost(): String = trim().lowercase()
+private fun String.normalizedHost(): String = trim().lowercase(Locale.US)
 
 private val InternalBackoffConfig = BackoffConfig(
     sendMaxRetries = 8,
@@ -266,8 +267,25 @@ private fun ProtectionSettings.merge(patch: SettingsPatch): ProtectionSettings {
 
 private fun String?.toDomainList(): List<String> {
     if (this.isNullOrBlank()) return emptyList()
-    return split("\n")
-        .map { it.trim().lowercase() }
-        .filter { it.isNotBlank() }
+    return split(Regex("[\\n,;]+"))
+        .mapNotNull { it.normalizeDomainEntry() }
         .distinct()
+}
+
+private fun String.normalizeDomainEntry(): String? {
+    var cleaned = trim().lowercase(Locale.US)
+    if (cleaned.isBlank()) return null
+
+    cleaned = cleaned
+        .removePrefix("https://")
+        .removePrefix("http://")
+        .substringBefore("/")
+        .substringBefore("?")
+        .substringBefore("#")
+        .substringBefore(":")
+        .trim('.')
+
+    cleaned = cleaned.removePrefix("www.").removePrefix("*.").removePrefix(".")
+    if (cleaned.isBlank() || !cleaned.contains('.')) return null
+    return cleaned
 }

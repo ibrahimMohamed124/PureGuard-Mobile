@@ -45,24 +45,27 @@ class ProtectionCoordinator(
         val rewrittenUrl = if (settings.enforceSafeSearch) safeSearchRewriter.rewrite(url) else url
         val rewrittenHost = host(rewrittenUrl) ?: host
 
-        if (urlScoringEngine.inList(rewrittenHost, settings.whitelist)) {
-            return NavigationEvaluation(
-                ProtectionDecision(
-                    DecisionType.ALLOW,
-                    "Whitelisted domain",
-                    url,
-                    rewrittenUrl = rewrittenUrl.takeIf { it != url }
-                )
-            )
-        }
         if (urlScoringEngine.inList(rewrittenHost, settings.blacklist)) {
             return NavigationEvaluation(
-                ProtectionDecision(
+                decision = ProtectionDecision(
                     DecisionType.BLOCK,
                     "User blacklist",
                     url,
                     rewrittenUrl = rewrittenUrl.takeIf { it != url }
-                )
+                ),
+                matchedBlacklist = true
+            )
+        }
+
+        if (urlScoringEngine.inList(rewrittenHost, settings.whitelist)) {
+            return NavigationEvaluation(
+                decision = ProtectionDecision(
+                    type = DecisionType.ALLOW,
+                    reason = "Whitelisted domain",
+                    url = url,
+                    rewrittenUrl = rewrittenUrl.takeIf { it != url }
+                ),
+                matchedWhitelist = true
             )
         }
         if (urlScoringEngine.isTrusted(rewrittenHost)) {
@@ -253,7 +256,9 @@ class ProtectionCoordinator(
 
 data class NavigationEvaluation(
     val decision: ProtectionDecision,
-    val dnsLayers: DnsLayerVerdict? = null
+    val dnsLayers: DnsLayerVerdict? = null,
+    val matchedWhitelist: Boolean = false,
+    val matchedBlacklist: Boolean = false
 )
 
 private data class CacheEntry(val decision: DecisionType, val timestamp: Long)

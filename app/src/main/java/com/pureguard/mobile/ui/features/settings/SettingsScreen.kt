@@ -73,6 +73,7 @@ import com.pureguard.mobile.ui.theme.PgMuted
 import com.pureguard.mobile.ui.theme.PgSuccess
 import com.pureguard.mobile.ui.theme.PgText
 import com.pureguard.mobile.ui.theme.TbColor
+import java.util.Locale
 
 private enum class SettingsDestination { MAIN, WHITELIST, BLACKLIST }
 
@@ -1014,12 +1015,20 @@ private fun DomainRow(
 }
 
 private fun parseDomains(text: String): List<String> =
-    text.lines().map { it.trim().lowercase() }.filter { it.isNotBlank() }.distinct()
+    text.split(Regex("[\\n,;]+"))
+        .mapNotNull { normalizeDomainCandidate(it) }
+        .distinct()
 
 private fun normalizeDomainCandidate(rawInput: String): String? {
-    val cleaned = rawInput.trim().lowercase()
-        .removePrefix("https://").removePrefix("http://").removePrefix("www.")
+    val cleaned = rawInput.trim().lowercase(Locale.US)
+        .removePrefix("https://")
+        .removePrefix("http://")
+        .removePrefix("www.")
+        .removePrefix("*.")
+        .removePrefix(".")
         .substringBefore("/").substringBefore("?").substringBefore("#")
+        .substringBefore(":")
+        .trim('.')
     if (cleaned.isBlank() || cleaned.length < 3 || !cleaned.contains('.') || cleaned.any { it.isWhitespace() }) return null
     return cleaned
 }

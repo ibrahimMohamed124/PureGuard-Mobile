@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,7 +19,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,8 +34,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -54,13 +52,13 @@ import androidx.compose.ui.unit.sp
 import com.pureguard.mobile.features.blocking.domain.model.Sensitivity
 import com.pureguard.mobile.features.blocking.domain.model.SettingsPatch
 import com.pureguard.mobile.features.blocking.presentation.viewmodel.ProtectionUiState
-import com.pureguard.mobile.ui.GlassCard
 import com.pureguard.mobile.ui.theme.PgAccentBlue
 import com.pureguard.mobile.ui.theme.PgAccentViolet
 import com.pureguard.mobile.ui.theme.PgDanger
 import com.pureguard.mobile.ui.theme.PgMuted
 import com.pureguard.mobile.ui.theme.PgSuccess
 import com.pureguard.mobile.ui.theme.PgText
+import com.pureguard.mobile.ui.theme.TbColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,6 +75,7 @@ fun HomeScreen(
     val settings = state.snapshot.settings
     val stats = state.snapshot.stats
     val lock = state.snapshot.lockState
+    val vpnReady = vpnActive || !vpnNeedsConsent
 
     val shieldScale = remember { Animatable(0.8f) }
     LaunchedEffect(settings.enabled) {
@@ -86,8 +85,8 @@ fun HomeScreen(
         )
     }
 
-    val isFullyActive = settings.enabled && accessibilityEnabled && vpnActive
-    val isPartiallyActive = settings.enabled && (accessibilityEnabled || vpnActive)
+    val isFullyActive = settings.enabled && accessibilityEnabled && vpnReady
+    val isPartiallyActive = settings.enabled && (accessibilityEnabled || vpnReady)
 
     val statusColor = when {
         isFullyActive -> PgSuccess
@@ -107,27 +106,9 @@ fun HomeScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Shield,
-                            contentDescription = null,
-                            tint = PgAccentBlue,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "PureGuard",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = PgText
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                )
+            HomeTopBar(
+                statusLabel = statusLabel,
+                statusColor = statusColor
             )
         }
     ) { innerPadding ->
@@ -142,121 +123,80 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    statusColor.copy(alpha = 0.18f),
-                                    statusColor.copy(alpha = 0.06f)
+                HomeSection(title = "Protection status") {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        statusColor.copy(alpha = 0.18f),
+                                        statusColor.copy(alpha = 0.06f)
+                                    )
                                 )
                             )
-                        )
-                        .padding(24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                            .border(1.dp, Color.White.copy(0.08f), RoundedCornerShape(18.dp))
+                            .padding(20.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(100.dp)
-                                .scale(shieldScale.value),
-                            contentAlignment = Alignment.Center
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.radialGradient(
-                                            listOf(statusColor.copy(0.25f), Color.Transparent)
-                                        ),
-                                        CircleShape
-                                    )
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .size(80.dp)
-                                    .background(statusColor.copy(0.15f), CircleShape),
+                                    .size(96.dp)
+                                    .scale(shieldScale.value),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Shield,
-                                    contentDescription = null,
-                                    tint = statusColor,
-                                    modifier = Modifier.size(44.dp)
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            Brush.radialGradient(
+                                                listOf(statusColor.copy(0.25f), Color.Transparent)
+                                            ),
+                                            CircleShape
+                                        )
                                 )
+                                Box(
+                                    modifier = Modifier
+                                        .size(76.dp)
+                                        .background(statusColor.copy(0.15f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Shield,
+                                        contentDescription = null,
+                                        tint = statusColor,
+                                        modifier = Modifier.size(40.dp)
+                                    )
+                                }
                             }
-                        }
 
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = statusLabel,
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = statusColor
-                            )
-                            Text(
-                                text = statusSubtitle,
-                                fontSize = 14.sp,
-                                color = PgMuted,
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            StatPill(label = "Blocked", value = "${stats.blockedCount}", color = PgDanger)
-                            StatPill(label = "Scanned", value = "${stats.scannedCount}", color = PgAccentBlue)
-                            StatPill(label = "DNS", value = "${stats.dnsBlockedCount}", color = PgAccentViolet)
-                        }
-                    }
-                }
-            }
-
-            item {
-                GlassCard {
-                    Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    "PureGuard",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
+                                    text = statusLabel,
+                                    fontSize = 21.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = statusColor
                                 )
                                 Text(
-                                    "Master protection switch",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = PgMuted
+                                    text = statusSubtitle,
+                                    fontSize = 13.sp,
+                                    color = PgMuted,
+                                    modifier = Modifier.padding(top = 4.dp)
                                 )
                             }
-                            Switch(
-                                checked = settings.enabled,
-                                onCheckedChange = { onPatch(SettingsPatch(enabled = it)) }
-                            )
-                        }
 
-                        if (lock.hasPassword) {
-                            Spacer(Modifier.height(12.dp))
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(PgAccentBlue.copy(0.12f))
-                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
-                                Icon(Icons.Default.Lock, null, tint = PgAccentBlue, modifier = Modifier.size(13.dp))
-                                Text("Tamper lock enabled", fontSize = 12.sp, color = PgAccentBlue, fontWeight = FontWeight.SemiBold)
+                                StatPill(label = "Blocked", value = "${stats.blockedCount}", color = PgDanger)
+                                StatPill(label = "Scanned", value = "${stats.scannedCount}", color = PgAccentBlue)
+                                StatPill(label = "DNS", value = "${stats.dnsBlockedCount}", color = PgAccentViolet)
                             }
                         }
                     }
@@ -264,122 +204,233 @@ fun HomeScreen(
             }
 
             item {
-                GlassCard {
-                    Column(Modifier.padding(top = 16.dp, start = 20.dp, end = 20.dp, bottom = 8.dp)) {
-                        Text(
-                            "Protection layers",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                HomeSection(title = "Core protection") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp, horizontal = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Enable PureGuard",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = PgText
+                            )
+                            Text(
+                                "Master protection switch",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = PgMuted
+                            )
+                        }
+                        Switch(
+                            checked = settings.enabled,
+                            onCheckedChange = { onPatch(SettingsPatch(enabled = it)) }
                         )
-                        Text(
-                            "Fine-tune how PureGuard protects you",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = PgMuted,
-                            modifier = Modifier.padding(top = 2.dp, bottom = 12.dp)
-                        )
+                    }
 
-                        FeatureToggleRow(
-                            icon = Icons.Default.Search,
-                            iconColor = PgAccentViolet,
-                            title = "Force SafeSearch",
-                            subtitle = "Enforce strict mode on Google, Bing & YouTube",
-                            checked = settings.enforceSafeSearch,
-                            onCheckedChange = { onPatch(SettingsPatch(enforceSafeSearch = it)) },
-                            enabled = settings.enabled
-                        )
-                        FeatureToggleRow(
-                            icon = Icons.Default.Image,
-                            iconColor = PgAccentBlue,
-                            title = "On-device image scan",
-                            subtitle = "Scan page images locally before displaying",
-                            checked = settings.enableImageScan,
-                            onCheckedChange = { onPatch(SettingsPatch(enableImageScan = it)) },
-                            enabled = settings.enabled
-                        )
+                    if (lock.hasPassword) {
+                        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(0.05f)))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier
+                                .padding(top = 12.dp, bottom = 8.dp, start = 4.dp, end = 4.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(PgAccentBlue.copy(0.12f))
+                                .padding(horizontal = 10.dp, vertical = 8.dp)
+                        ) {
+                            Icon(Icons.Default.Lock, null, tint = PgAccentBlue, modifier = Modifier.size(14.dp))
+                            Text(
+                                "Tamper lock enabled",
+                                fontSize = 12.sp,
+                                color = PgAccentBlue,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
             }
 
             item {
-                GlassCard {
-                    Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
-                        Text(
-                            "Filter sensitivity",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            "Higher levels block content more aggressively",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = PgMuted,
-                            modifier = Modifier.padding(top = 2.dp)
-                        )
-                        SensitivitySelector(
-                            selected = settings.sensitivity,
-                            onSelect = { onPatch(SettingsPatch(sensitivity = it)) },
-                            modifier = Modifier.padding(top = 14.dp)
-                        )
-                    }
+                HomeSection(title = "Protection layers") {
+                    FeatureToggleRow(
+                        icon = Icons.Default.Search,
+                        iconColor = PgAccentViolet,
+                        title = "Force SafeSearch",
+                        subtitle = "Enforce strict mode on Google, Bing & YouTube",
+                        checked = settings.enforceSafeSearch,
+                        onCheckedChange = { onPatch(SettingsPatch(enforceSafeSearch = it)) },
+                        enabled = settings.enabled
+                    )
+                    FeatureToggleRow(
+                        icon = Icons.Default.Image,
+                        iconColor = PgAccentBlue,
+                        title = "On-device image scan",
+                        subtitle = "Scan page images locally before displaying",
+                        checked = settings.enableImageScan,
+                        onCheckedChange = { onPatch(SettingsPatch(enableImageScan = it)) },
+                        enabled = settings.enabled,
+                        showDivider = false
+                    )
                 }
             }
 
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                HomeSection(title = "Filter sensitivity") {
                     Text(
-                        "Session stats",
-                        style = MaterialTheme.typography.labelLarge,
+                        text = "Higher levels block content more aggressively",
+                        style = MaterialTheme.typography.bodySmall,
                         color = PgMuted,
-                        fontWeight = FontWeight.SemiBold
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
                     )
-                    TextButton(onClick = onResetStats) {
-                        Text("Reset", fontSize = 13.sp, color = PgMuted)
+                    SensitivitySelector(
+                        selected = settings.sensitivity,
+                        onSelect = { onPatch(SettingsPatch(sensitivity = it)) },
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            item {
+                HomeSection(title = "Session stats") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Current session counters",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = PgMuted
+                        )
+                        TextButton(onClick = onResetStats) {
+                            Text("Reset", fontSize = 13.sp, color = PgMuted)
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        LargeStatCard(
+                            modifier = Modifier.weight(1f),
+                            label = "Pages blocked",
+                            value = "${stats.blockedCount}",
+                            color = PgDanger
+                        )
+                        LargeStatCard(
+                            modifier = Modifier.weight(1f),
+                            label = "Pages scanned",
+                            value = "${stats.scannedCount}",
+                            color = PgAccentBlue
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        LargeStatCard(
+                            modifier = Modifier.weight(1f),
+                            label = "DNS blocked",
+                            value = "${stats.dnsBlockedCount}",
+                            color = PgAccentViolet
+                        )
+                        LargeStatCard(
+                            modifier = Modifier.weight(1f),
+                            label = "SafeSearch enforced",
+                            value = "${stats.safeSearchRewriteCount}",
+                            color = PgSuccess
+                        )
                     }
                 }
             }
+        }
+    }
+}
 
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    LargeStatCard(
-                        modifier = Modifier.weight(1f),
-                        label = "Pages blocked",
-                        value = "${stats.blockedCount}",
-                        color = PgDanger
-                    )
-                    LargeStatCard(
-                        modifier = Modifier.weight(1f),
-                        label = "Pages scanned",
-                        value = "${stats.scannedCount}",
-                        color = PgAccentBlue
-                    )
-                }
+@Composable
+private fun HomeTopBar(
+    statusLabel: String,
+    statusColor: Color
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(TbColor.copy(alpha = 0.92f))
+            .border(width = 1.dp, color = Color.White.copy(0.06f))
+            .padding(top = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(72.dp)
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Home",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = PgText
+                )
+                Text(
+                    text = "Your live protection dashboard",
+                    fontSize = 12.sp,
+                    color = PgMuted
+                )
             }
 
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    LargeStatCard(
-                        modifier = Modifier.weight(1f),
-                        label = "DNS blocked",
-                        value = "${stats.dnsBlockedCount}",
-                        color = PgAccentViolet
-                    )
-                    LargeStatCard(
-                        modifier = Modifier.weight(1f),
-                        label = "SafeSearch enforced",
-                        value = "${stats.safeSearchRewriteCount}",
-                        color = PgSuccess
-                    )
-                }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(statusColor.copy(0.15f))
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = statusLabel,
+                    color = statusColor,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
+        }
+    }
+}
+
+@Composable
+private fun HomeSection(
+    title: String,
+    content: @Composable () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = title.uppercase(),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = PgAccentBlue,
+            modifier = Modifier
+                .padding(start = 4.dp, bottom = 8.dp, top = 8.dp)
+                .alpha(0.8f)
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color.White.copy(0.04f))
+                .border(1.dp, Color.White.copy(0.08f), RoundedCornerShape(20.dp))
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+        ) {
+            content()
         }
     }
 }
@@ -416,38 +467,38 @@ private fun FeatureToggleRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     enabled: Boolean = true,
+    showDivider: Boolean = true,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .alpha(if (enabled) 1f else 0.5f)
-            .padding(vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
+    Column(modifier = modifier.alpha(if (enabled) 1f else 0.5f)) {
+        Row(
             modifier = Modifier
-                .size(40.dp)
-                .background(iconColor.copy(0.12f), RoundedCornerShape(10.dp)),
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = iconColor,
-                modifier = Modifier.size(20.dp)
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(iconColor.copy(0.1f), RoundedCornerShape(10.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, null, tint = iconColor, modifier = Modifier.size(18.dp))
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = PgText)
+                Text(subtitle, fontSize = 12.sp, color = PgMuted)
+            }
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                enabled = enabled
             )
         }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = PgMuted)
+        if (showDivider) {
+            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(0.05f)))
         }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            enabled = enabled
-        )
     }
 }
 
@@ -460,14 +511,15 @@ private fun LargeStatCard(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(14.dp))
             .background(color.copy(alpha = 0.09f))
-            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .border(1.dp, color.copy(alpha = 0.2f), RoundedCornerShape(14.dp))
+            .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {
         Column {
             Text(
                 text = value,
-                fontSize = 28.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = color
             )
@@ -510,7 +562,6 @@ private fun SensitivitySelector(
                 Sensitivity.LOW -> PgSuccess
                 Sensitivity.MEDIUM -> PgAccentBlue
                 Sensitivity.HIGH -> PgDanger
-                else -> PgAccentViolet
             }
 
             Box(

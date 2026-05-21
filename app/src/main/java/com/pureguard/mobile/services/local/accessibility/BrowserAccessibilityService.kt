@@ -186,6 +186,17 @@ class BrowserAccessibilityService : AccessibilityService() {
                 reason = reason
             )
         } else {
+            if (evaluation.matchedWhitelist) {
+                // Whitelist should be an explicit override that bypasses extra content checks.
+                repository.bumpScanned()
+                ServiceVpn.unblockBrowserPackage(this, packageName)
+                if (lastBlockedPackage == packageName && lastBlockedUrl == url) {
+                    lastBlockedPackage = null
+                    lastBlockedUrl = null
+                }
+                return
+            }
+
             val rewrittenUrl = decision.rewrittenUrl
             if (!rewrittenUrl.isNullOrBlank()) {
                 val rewritten = maybeApplySafeSearchRewrite(packageName, url, rewrittenUrl)
