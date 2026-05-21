@@ -1,16 +1,19 @@
 package com.pureguard.mobile.ui.features.analytics
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,6 +51,7 @@ import com.pureguard.mobile.ui.theme.PgDanger
 import com.pureguard.mobile.ui.theme.PgMuted
 import com.pureguard.mobile.ui.theme.PgSuccess
 import com.pureguard.mobile.ui.theme.PgText
+import com.pureguard.mobile.ui.theme.TbColor
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,17 +80,158 @@ fun AnalyticsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Analytics",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = PgText
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                TbColor,
+                                TbColor.copy(alpha = 0.94f)
+                            )
+                        )
                     )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-            )
+                    .border(
+                        width = 1.dp,
+                        color = Color.White.copy(0.05f)
+                    )
+                    .statusBarsPadding()
+            ) {
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                ) {
+
+                    // Top Row (Compact)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        // Icon (smaller)
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(
+                                            PgAccentBlue.copy(0.22f),
+                                            PgAccentViolet.copy(0.18f)
+                                        )
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Shield,
+                                contentDescription = null,
+                                tint = PgAccentBlue,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        // Title
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+
+                            Text(
+                                text = "Analytics",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = PgText
+                            )
+
+                            Text(
+                                text = if (hasTelemetry)
+                                    "Real-time protection insights"
+                                else
+                                    "Protection activity will appear here",
+                                fontSize = 11.sp,
+                                color = PgMuted
+                            )
+                        }
+
+                        // Status Badge (compact)
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    if (vpnReady)
+                                        PgSuccess.copy(0.14f)
+                                    else
+                                        PgDanger.copy(0.14f)
+                                )
+                                .padding(horizontal = 8.dp, vertical = 5.dp)
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+
+                                Box(
+                                    modifier = Modifier
+                                        .size(5.dp)
+                                        .background(
+                                            if (vpnReady) PgSuccess else PgDanger,
+                                            CircleShape
+                                        )
+                                )
+
+                                Text(
+                                    text = if (vpnReady) "Protected" else "Limited",
+                                    color = if (vpnReady) PgSuccess else PgDanger,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    // Stats strip (reduced spacing)
+                    if (hasTelemetry) {
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.White.copy(0.035f))
+                                .padding(vertical = 10.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+
+                            MiniTopMetric(
+                                value = "${stats.blockedCount}",
+                                label = "Blocked",
+                                color = PgDanger
+                            )
+
+                            MiniDivider()
+
+                            MiniTopMetric(
+                                value = "${stats.scannedCount}",
+                                label = "Scanned",
+                                color = PgSuccess
+                            )
+
+                            MiniDivider()
+
+                            MiniTopMetric(
+                                value = "$protectionRate%",
+                                label = "Protection",
+                                color = PgAccentBlue
+                            )
+                        }
+                    }
+                }
+            }
         }
     ) { innerPadding ->
         LazyColumn(
@@ -404,4 +549,39 @@ private fun EmptyAnalyticsState() {
             }
         }
     }
+}
+
+@Composable
+private fun MiniTopMetric(
+    value: String,
+    label: String,
+    color: Color
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+
+        Text(
+            text = value,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
+
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            color = PgMuted
+        )
+    }
+}
+
+@Composable
+private fun MiniDivider() {
+    Box(
+        modifier = Modifier
+            .width(1.dp)
+            .height(28.dp)
+            .background(Color.White.copy(0.08f))
+    )
 }

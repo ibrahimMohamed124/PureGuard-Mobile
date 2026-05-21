@@ -1,5 +1,6 @@
 package com.pureguard.mobile.ui.features.settings
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,8 +30,6 @@ import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -48,8 +47,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -75,6 +72,7 @@ import com.pureguard.mobile.ui.theme.PgDanger
 import com.pureguard.mobile.ui.theme.PgMuted
 import com.pureguard.mobile.ui.theme.PgSuccess
 import com.pureguard.mobile.ui.theme.PgText
+import com.pureguard.mobile.ui.theme.TbColor
 
 private enum class SettingsDestination { MAIN, WHITELIST, BLACKLIST }
 
@@ -154,24 +152,101 @@ fun SettingsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = appBarTitle,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = PgText
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        TbColor.copy(alpha = 0.92f)
                     )
-                },
-                navigationIcon = {
+                    .border(
+                        width = 1.dp,
+                        color = Color.White.copy(0.06f)
+                    )
+                    .padding(
+                        top = 8.dp
+                    )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(72.dp)
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+
+                    // Back Button
                     if (destination != SettingsDestination.MAIN) {
-                        IconButton(onClick = { destination = SettingsDestination.MAIN; domainInput = "" }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = PgText)
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(Color.White.copy(0.05f))
+                                .clickable {
+                                    destination = SettingsDestination.MAIN
+                                    domainInput = ""
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = PgText,
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
+
+                        Spacer(modifier = Modifier.width(14.dp))
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-            )
+
+                    // Title + Subtitle
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+
+                        Text(
+                            text = appBarTitle,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = PgText
+                        )
+
+                        Text(
+                            text = when (destination) {
+                                SettingsDestination.MAIN ->
+                                    "Manage protection and security"
+
+                                SettingsDestination.WHITELIST ->
+                                    "Always allowed domains"
+
+                                SettingsDestination.BLACKLIST ->
+                                    "Always blocked domains"
+                            },
+                            fontSize = 12.sp,
+                            color = PgMuted
+                        )
+                    }
+
+                    // Right Status Badge
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (locked)
+                                    PgDanger.copy(0.15f)
+                                else
+                                    PgSuccess.copy(0.15f)
+                            )
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = if (locked) "Locked" else "Secure",
+                            color = if (locked) PgDanger else PgSuccess,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
         },
         floatingActionButton = {
             if (destination != SettingsDestination.MAIN && !locked) {
@@ -229,12 +304,7 @@ fun SettingsScreen(
                 }
 
                 item {
-                    SettingsSection(
-                        title = "Core protection",
-                        subtitle = "Main protection layers",
-                        icon = Icons.Default.Shield,
-                        iconColor = PgAccentBlue
-                    ) {
+                    SettingsSection(title = "Core protection") {
                         SettingsToggleRow(
                             icon = Icons.Default.Shield,
                             iconColor = PgAccentBlue,
@@ -276,12 +346,7 @@ fun SettingsScreen(
                 }
 
                 item {
-                    SettingsSection(
-                        title = "Advanced",
-                        subtitle = "Aggressive blocking options",
-                        icon = Icons.Default.Security,
-                        iconColor = PgDanger
-                    ) {
+                    SettingsSection(title = "Advanced Blocking") {
                         SettingsToggleRow(
                             icon = Icons.Default.Warning,
                             iconColor = PgDanger,
@@ -305,12 +370,7 @@ fun SettingsScreen(
                 }
 
                 item {
-                    SettingsSection(
-                        title = "Filter sensitivity",
-                        subtitle = "How aggressively to block content",
-                        icon = Icons.Default.Settings,
-                        iconColor = PgAccentViolet
-                    ) {
+                    SettingsSection(title = "Filter sensitivity") {
                         Column(modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)) {
                             ModernSensitivitySelector(
                                 selected = sensitivity,
@@ -340,12 +400,7 @@ fun SettingsScreen(
                 }
 
                 item {
-                    SettingsSection(
-                        title = "Domain rules",
-                        subtitle = "Allow and block specific domains",
-                        icon = Icons.Default.Block,
-                        iconColor = PgDanger
-                    ) {
+                    SettingsSection(title = "Domain rules") {
                         DomainNavRow(
                             icon = Icons.Default.CheckCircle,
                             iconColor = PgSuccess,
@@ -499,42 +554,32 @@ private fun LockCard(
 @Composable
 private fun SettingsSection(
     title: String,
-    subtitle: String,
-    icon: ImageVector,
-    iconColor: Color,
     content: @Composable () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color.White.copy(0.04f))
-            .border(1.dp, Color.White.copy(0.08f), RoundedCornerShape(20.dp))
     ) {
-        Row(
+        // عنوان القسم بره الـ Container عشان يفصل المجموعات بشكل نظيف جداً كـ Headers
+        Text(
+            text = title.uppercase(), // أو سيبها عادي حسب رغبتك
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = PgAccentBlue, // أو أي لون براند أساسي عندك زي PgAccentViolet
+            modifier = Modifier
+                .padding(start = 4.dp, bottom = 8.dp, top = 8.dp)
+                .alpha(0.8f)
+        )
+
+        // الـ Container اللي جواه الـ Rows
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color.White.copy(0.04f))
+                .border(1.dp, Color.White.copy(0.08f), RoundedCornerShape(20.dp))
+                .padding(horizontal = 12.dp, vertical = 4.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .background(iconColor.copy(0.12f), RoundedCornerShape(10.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(icon, null, tint = iconColor, modifier = Modifier.size(18.dp))
-            }
-            Column {
-                Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = PgText)
-                Text(subtitle, fontSize = 12.sp, color = PgMuted)
-            }
-        }
-
-        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(0.06f)))
-
-        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
             content()
         }
     }
@@ -550,7 +595,7 @@ private fun SettingsToggleRow(
     onCheckedChange: (Boolean) -> Unit,
     enabled: Boolean = true,
     showDivider: Boolean = true,
-    modifier: Modifier = Modifier
+    @SuppressLint("ModifierParameter") modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.alpha(if (enabled) 1f else 0.5f)) {
         Row(

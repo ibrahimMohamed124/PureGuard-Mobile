@@ -62,6 +62,7 @@ android {
 dependencies {
 
     implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.runtime.saveable)
 
     implementation(libs.androidx.core.ktx)
 
