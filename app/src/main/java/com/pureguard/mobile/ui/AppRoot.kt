@@ -9,6 +9,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.delay
@@ -20,6 +24,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -33,7 +38,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -56,6 +63,9 @@ import com.pureguard.mobile.ui.features.home.HomeScreen
 import com.pureguard.mobile.ui.features.onboarding.OnboardingScreen
 import com.pureguard.mobile.ui.features.onboarding.PermissionSetupScreen
 import com.pureguard.mobile.ui.features.settings.SettingsScreen
+import com.pureguard.mobile.ui.theme.PgAccentBlue
+import com.pureguard.mobile.ui.theme.PgMuted
+import com.pureguard.mobile.ui.theme.TbColor
 
 private const val PREF_ONBOARDING_DONE = "onboarding_complete"
 private const val PREF_PERMISSIONS_SEEN = "permissions_seen"
@@ -228,22 +238,39 @@ private fun MainAppScaffold(
         bottomBar = {
             val entry by navController.currentBackStackEntryAsState()
             val current = entry?.destination?.route
-            NavigationBar {
-                navItems.forEach { item ->
-                    NavigationBarItem(
-                        selected = current == item.route,
-                        onClick = {
-                            navController.navigate(item.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(TbColor.copy(alpha = 0.92f))
+                    .border(1.dp, Color.White.copy(0.06f))
+            ) {
+                NavigationBar(
+                    containerColor = Color.Transparent,
+                    tonalElevation = 0.dp
+                ) {
+                    navItems.forEach { item ->
+                        NavigationBarItem(
+                            selected = current == item.route,
+                            onClick = {
+                                navController.navigate(item.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    restoreState = true
+                                    launchSingleTop = true
                                 }
-                                restoreState = true
-                                launchSingleTop = true
-                            }
-                        },
-                        icon = item.icon,
-                        label = { Text(item.label) }
-                    )
+                            },
+                            icon = item.icon,
+                            label = { Text(item.label) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = PgAccentBlue,
+                                selectedTextColor = PgAccentBlue,
+                                unselectedIconColor = PgMuted,
+                                unselectedTextColor = PgMuted,
+                                indicatorColor = PgAccentBlue.copy(alpha = 0.14f)
+                            )
+                        )
+                    }
                 }
             }
         }
