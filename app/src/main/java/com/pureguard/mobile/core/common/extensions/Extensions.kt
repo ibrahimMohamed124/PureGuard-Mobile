@@ -15,14 +15,23 @@ import android.os.Process
 import android.provider.Settings
 import android.widget.Toast
 import androidx.annotation.RequiresPermission
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.focus.onFocusEvent
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 /* -------------------------------------------------------------------------- */
@@ -131,6 +140,22 @@ fun Context.openVpnSettings() {
         Intent(Settings.ACTION_VPN_SETTINGS)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     )
+}
+
+fun Modifier.autoBringIntoView(): Modifier = composed {
+    val requester = remember { BringIntoViewRequester() }
+    val scope = rememberCoroutineScope()
+
+    this
+        .bringIntoViewRequester(requester)
+        .onFocusEvent {
+            if (it.isFocused) {
+                scope.launch {
+                    delay(150)
+                    requester.bringIntoView()
+                }
+            }
+        }
 }
 
 /* -------------------------------------------------------------------------- */

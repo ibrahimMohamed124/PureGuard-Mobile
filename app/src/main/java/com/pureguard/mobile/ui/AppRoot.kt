@@ -53,6 +53,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.pureguard.mobile.core.datastore.Prefs
+import com.pureguard.mobile.core.navigation.NavRoutes
 import com.pureguard.mobile.features.blocking.domain.model.SettingsPatch
 import com.pureguard.mobile.features.blocking.presentation.viewmodel.ProtectionUiState
 import com.pureguard.mobile.features.blocking.presentation.viewmodel.ProtectionViewModel
@@ -277,10 +278,10 @@ private fun MainAppScaffold(
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = "home",
+            startDestination = NavRoutes.Home.route,
             modifier = Modifier.padding(padding)
         ) {
-            composable("home") {
+            composable(NavRoutes.Home.route) {
                 HomeScreen(
                     state = protectionState,
                     accessibilityEnabled = accessibilityEnabled,
@@ -292,7 +293,7 @@ private fun MainAppScaffold(
                     onResetStats = protectionViewModel::resetStats
                 )
             }
-            composable("settings") {
+            composable(NavRoutes.Settings.route) {
                 SettingsScreen(
                     state = protectionState,
                     onSavePatch = { patch, password -> protectionViewModel.updateSettings(patch, password) },
@@ -305,7 +306,7 @@ private fun MainAppScaffold(
                     }
                 )
             }
-            composable("analytics") {
+            composable(NavRoutes.Analytics.route) {
                 AnalyticsScreen(
                     state = protectionState,
                     accessibilityEnabled = accessibilityEnabled,

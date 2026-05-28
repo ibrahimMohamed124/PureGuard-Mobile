@@ -13,6 +13,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -76,6 +77,7 @@ class BlockedContentActivity : ComponentActivity() {
         setContent {
             PureGuardTheme {
                 var password by remember { mutableStateOf("") }
+                var passwordError by remember { mutableStateOf<String?>(null) }
                 var submitting by remember { mutableStateOf(false) }
                 var status by remember { mutableStateOf("") }
 
@@ -121,6 +123,7 @@ class BlockedContentActivity : ComponentActivity() {
                                     style = MaterialTheme.typography.labelLarge,
                                     color = PgAccentBlue
                                 )
+
                                 Text(
                                     text = blockedReason.ifBlank { "Suspicious content detected." },
                                     style = MaterialTheme.typography.bodySmall,
@@ -140,7 +143,14 @@ class BlockedContentActivity : ComponentActivity() {
                                 )
                                 OutlinedTextField(
                                     value = password,
-                                    onValueChange = { password = it },
+                                    onValueChange = {
+                                        password = it
+                                        passwordError = when {
+                                            it.isBlank() -> "Password required"
+                                            it.length < 4 -> "Password too short"
+                                            else -> null
+                                        }
+                                    },
                                     label = { Text("Password (if lock is enabled)", color = PgMuted) },
                                     modifier = Modifier.fillMaxWidth(),
                                     visualTransformation = PasswordVisualTransformation(),

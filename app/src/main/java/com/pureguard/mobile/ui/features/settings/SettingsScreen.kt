@@ -1,6 +1,5 @@
 package com.pureguard.mobile.ui.features.settings
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -26,9 +24,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Speed
@@ -39,14 +35,11 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -60,12 +53,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pureguard.mobile.features.blocking.domain.model.Sensitivity
 import com.pureguard.mobile.features.blocking.domain.model.SettingsPatch
 import com.pureguard.mobile.features.blocking.presentation.viewmodel.ProtectionUiState
+import com.pureguard.mobile.ui.features.settings.composable.DomainManagerScreen
+import com.pureguard.mobile.ui.features.settings.composable.LockCard
+import com.pureguard.mobile.ui.features.settings.composable.SettingsSection
+import com.pureguard.mobile.ui.features.settings.composable.SettingsToggleRow
+import com.pureguard.mobile.ui.features.settings.composable.TamperProtectionCard
+import com.pureguard.mobile.ui.features.settings.composable.normalizeDomainCandidate
+import com.pureguard.mobile.ui.features.settings.composable.parseDomains
 import com.pureguard.mobile.ui.theme.PgAccentBlue
 import com.pureguard.mobile.ui.theme.PgAccentViolet
 import com.pureguard.mobile.ui.theme.PgDanger
@@ -73,7 +72,7 @@ import com.pureguard.mobile.ui.theme.PgMuted
 import com.pureguard.mobile.ui.theme.PgSuccess
 import com.pureguard.mobile.ui.theme.PgText
 import com.pureguard.mobile.ui.theme.TbColor
-import java.util.Locale
+import java.util.Collections.emptyList
 
 private enum class SettingsDestination { MAIN, WHITELIST, BLACKLIST }
 
@@ -490,143 +489,6 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun LockCard(
-    password: String,
-    onPasswordChange: (String) -> Unit,
-    onUnlock: (Boolean) -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF1A1030))
-            .border(1.dp, PgAccentViolet.copy(0.3f), RoundedCornerShape(20.dp))
-            .padding(20.dp)
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .background(PgAccentViolet.copy(0.15f), RoundedCornerShape(12.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.Lock, null, tint = PgAccentViolet, modifier = Modifier.size(22.dp))
-                }
-                Column {
-                    Text("Settings locked", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = PgText)
-                    Text("Enter your password to edit settings", fontSize = 13.sp, color = PgMuted)
-                }
-            }
-
-            OutlinedTextField(
-                value = password,
-                onValueChange = onPasswordChange,
-                label = { Text("Password", color = PgMuted, fontSize = 13.sp) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                visualTransformation = PasswordVisualTransformation(),
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = PgAccentViolet,
-                    unfocusedBorderColor = Color.White.copy(0.12f),
-                    focusedTextColor = PgText,
-                    unfocusedTextColor = PgText
-                )
-            )
-
-            Button(
-                onClick = { onUnlock(true) },
-                modifier = Modifier.fillMaxWidth().height(46.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PgAccentViolet)
-            ) {
-                Icon(Icons.Default.Lock, null, modifier = Modifier.size(16.dp), tint = Color(0xFF0A0F1E))
-                Spacer(Modifier.width(8.dp))
-                Text("Unlock", fontWeight = FontWeight.SemiBold, color = Color(0xFF0A0F1E))
-            }
-        }
-    }
-}
-
-@Composable
-private fun SettingsSection(
-    title: String,
-    content: @Composable () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-    ) {
-        // عنوان القسم بره الـ Container عشان يفصل المجموعات بشكل نظيف جداً كـ Headers
-        Text(
-            text = title.uppercase(), // أو سيبها عادي حسب رغبتك
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            color = PgAccentBlue, // أو أي لون براند أساسي عندك زي PgAccentViolet
-            modifier = Modifier
-                .padding(start = 4.dp, bottom = 8.dp, top = 8.dp)
-                .alpha(0.8f)
-        )
-
-        // الـ Container اللي جواه الـ Rows
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(Color.White.copy(0.04f))
-                .border(1.dp, Color.White.copy(0.08f), RoundedCornerShape(20.dp))
-                .padding(horizontal = 12.dp, vertical = 4.dp)
-        ) {
-            content()
-        }
-    }
-}
-
-@Composable
-private fun SettingsToggleRow(
-    icon: ImageVector,
-    iconColor: Color,
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    enabled: Boolean = true,
-    showDivider: Boolean = true,
-    @SuppressLint("ModifierParameter") modifier: Modifier = Modifier
-) {
-    Column(modifier = modifier.alpha(if (enabled) 1f else 0.5f)) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 12.dp, horizontal = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .background(iconColor.copy(0.1f), RoundedCornerShape(10.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(icon, null, tint = iconColor, modifier = Modifier.size(18.dp))
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = PgText)
-                Text(subtitle, fontSize = 12.sp, color = PgMuted)
-            }
-            Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
-        }
-        if (showDivider) {
-            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(0.05f)))
-        }
-    }
-}
-
-@Composable
 private fun DomainNavRow(
     icon: ImageVector,
     iconColor: Color,
@@ -718,317 +580,3 @@ private fun ModernSensitivitySelector(
     }
 }
 
-@Composable
-private fun TamperProtectionCard(
-    hasPassword: Boolean,
-    locked: Boolean,
-    oldPassword: String,
-    newPassword: String,
-    newPassword2: String,
-    removePassword: String,
-    onOldPasswordChange: (String) -> Unit,
-    onNewPasswordChange: (String) -> Unit,
-    onNewPassword2Change: (String) -> Unit,
-    onRemovePasswordChange: (String) -> Unit,
-    onSetPassword: () -> Unit,
-    onRemovePassword: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color.White.copy(0.04f))
-            .border(1.dp, Color.White.copy(0.08f), RoundedCornerShape(20.dp))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .background(PgAccentBlue.copy(0.12f), RoundedCornerShape(10.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.Lock, null, tint = PgAccentBlue, modifier = Modifier.size(18.dp))
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Tamper protection", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = PgText)
-                Text("Password-protect your settings", fontSize = 12.sp, color = PgMuted)
-            }
-            if (hasPassword) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(PgSuccess.copy(0.12f))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text("Active", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = PgSuccess)
-                }
-            }
-        }
-
-        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(0.06f)))
-
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            val fieldColors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = PgAccentBlue,
-                unfocusedBorderColor = Color.White.copy(0.12f),
-                focusedTextColor = PgText,
-                unfocusedTextColor = PgText,
-                disabledTextColor = PgMuted,
-                disabledBorderColor = Color.White.copy(0.06f)
-            )
-
-            if (hasPassword) {
-                OutlinedTextField(
-                    value = oldPassword,
-                    onValueChange = onOldPasswordChange,
-                    label = { Text("Current password", color = PgMuted, fontSize = 13.sp) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    visualTransformation = PasswordVisualTransformation(),
-                    singleLine = true,
-                    colors = fieldColors
-                )
-            }
-
-            OutlinedTextField(
-                value = newPassword,
-                onValueChange = onNewPasswordChange,
-                label = { Text("New password", color = PgMuted, fontSize = 13.sp) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                visualTransformation = PasswordVisualTransformation(),
-                singleLine = true,
-                colors = fieldColors
-            )
-
-            OutlinedTextField(
-                value = newPassword2,
-                onValueChange = onNewPassword2Change,
-                label = { Text("Confirm new password", color = PgMuted, fontSize = 13.sp) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                visualTransformation = PasswordVisualTransformation(),
-                singleLine = true,
-                colors = fieldColors
-            )
-
-            val passwordsMatch = newPassword.isNotBlank() && newPassword == newPassword2
-            Button(
-                onClick = onSetPassword,
-                enabled = passwordsMatch,
-                modifier = Modifier.fillMaxWidth().height(46.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = PgAccentBlue,
-                    disabledContainerColor = Color.White.copy(0.07f)
-                )
-            ) {
-                Text(
-                    text = if (hasPassword) "Change password" else "Set password",
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (passwordsMatch) Color(0xFF0A0F1E) else PgMuted
-                )
-            }
-
-            if (hasPassword) {
-                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(0.06f)))
-                OutlinedTextField(
-                    value = removePassword,
-                    onValueChange = onRemovePasswordChange,
-                    label = { Text("Password to remove lock", color = PgMuted, fontSize = 13.sp) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    visualTransformation = PasswordVisualTransformation(),
-                    singleLine = true,
-                    colors = fieldColors
-                )
-                TextButton(
-                    onClick = onRemovePassword,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Remove password lock", color = PgDanger, fontWeight = FontWeight.SemiBold)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DomainManagerScreen(
-    destination: SettingsDestination,
-    domains: List<String>,
-    locked: Boolean,
-    domainInput: String,
-    onDomainInputChange: (String) -> Unit,
-    onDeleteDomain: (String) -> Unit,
-    innerPadding: PaddingValues
-) {
-    val isWhitelist = destination == SettingsDestination.WHITELIST
-    val accentColor = if (isWhitelist) PgSuccess else PgDanger
-    val title = if (isWhitelist) "Allowed domains" else "Blocked domains"
-    val helper = if (isWhitelist) "These domains are always allowed through." else "These domains are always blocked."
-
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            start = 16.dp,
-            end = 16.dp,
-            top = innerPadding.calculateTopPadding() + 4.dp,
-            bottom = innerPadding.calculateBottomPadding() + 88.dp
-        ),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        item {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(accentColor.copy(0.06f))
-                    .border(1.dp, accentColor.copy(0.2f), RoundedCornerShape(20.dp))
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = PgText)
-                Text(helper, fontSize = 13.sp, color = PgMuted)
-                OutlinedTextField(
-                    value = domainInput,
-                    onValueChange = onDomainInputChange,
-                    label = { Text("Domain to add", color = PgMuted, fontSize = 13.sp) },
-                    placeholder = { Text("example.com", color = PgMuted.copy(0.5f)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    enabled = !locked,
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = accentColor,
-                        unfocusedBorderColor = Color.White.copy(0.12f),
-                        focusedTextColor = PgText,
-                        unfocusedTextColor = PgText
-                    )
-                )
-            }
-        }
-
-        if (domains.isEmpty()) {
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White.copy(0.03f))
-                        .padding(vertical = 32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(accentColor.copy(0.12f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                if (isWhitelist) Icons.Default.CheckCircle else Icons.Default.Block,
-                                null, tint = accentColor, modifier = Modifier.size(24.dp)
-                            )
-                        }
-                        Text("No domains added yet", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = PgText)
-                        Text("Use the + button to add your first domain", fontSize = 12.sp, color = PgMuted)
-                    }
-                }
-            }
-        } else {
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White.copy(0.04f))
-                        .border(1.dp, Color.White.copy(0.08f), RoundedCornerShape(16.dp))
-                ) {
-                    domains.forEachIndexed { index, domain ->
-                        DomainRow(
-                            domain = domain,
-                            accentColor = accentColor,
-                            enabled = !locked,
-                            showDivider = index < domains.lastIndex,
-                            onDelete = { onDeleteDomain(domain) }
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DomainRow(
-    domain: String,
-    accentColor: Color,
-    enabled: Boolean,
-    showDivider: Boolean,
-    onDelete: () -> Unit
-) {
-    Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .background(accentColor, CircleShape)
-            )
-            Text(
-                text = domain,
-                style = MaterialTheme.typography.bodyMedium,
-                color = PgText,
-                modifier = Modifier.weight(1f)
-            )
-            IconButton(onClick = onDelete, enabled = enabled, modifier = Modifier.size(32.dp)) {
-                Icon(
-                    imageVector = Icons.Default.DeleteOutline,
-                    contentDescription = "Remove",
-                    tint = if (enabled) PgDanger.copy(0.7f) else PgMuted,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        }
-        if (showDivider) {
-            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(0.05f)))
-        }
-    }
-}
-
-private fun parseDomains(text: String): List<String> =
-    text.split(Regex("[\\n,;]+"))
-        .mapNotNull { normalizeDomainCandidate(it) }
-        .distinct()
-
-private fun normalizeDomainCandidate(rawInput: String): String? {
-    val cleaned = rawInput.trim().lowercase(Locale.US)
-        .removePrefix("https://")
-        .removePrefix("http://")
-        .removePrefix("www.")
-        .removePrefix("*.")
-        .removePrefix(".")
-        .substringBefore("/").substringBefore("?").substringBefore("#")
-        .substringBefore(":")
-        .trim('.')
-    if (cleaned.isBlank() || cleaned.length < 3 || !cleaned.contains('.') || cleaned.any { it.isWhitespace() }) return null
-    return cleaned
-}
