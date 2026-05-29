@@ -55,6 +55,7 @@ import androidx.navigation.compose.rememberNavController
 import com.pureguard.mobile.core.datastore.Prefs
 import com.pureguard.mobile.core.navigation.NavRoutes
 import com.pureguard.mobile.features.blocking.domain.model.SettingsPatch
+import com.pureguard.mobile.features.blocking.presentation.state.RepoResult
 import com.pureguard.mobile.features.blocking.presentation.viewmodel.ProtectionUiState
 import com.pureguard.mobile.features.blocking.presentation.viewmodel.ProtectionViewModel
 import com.pureguard.mobile.services.local.background.ProtectionServicesStatus
@@ -64,6 +65,8 @@ import com.pureguard.mobile.ui.features.home.HomeScreen
 import com.pureguard.mobile.ui.features.onboarding.OnboardingScreen
 import com.pureguard.mobile.ui.features.onboarding.PermissionSetupScreen
 import com.pureguard.mobile.ui.features.settings.SettingsScreen
+import com.pureguard.mobile.ui.features.settings.composable.MandatoryLockPasswordScreen
+import com.pureguard.mobile.ui.features.settings.composable.PasswordGateDialog
 import com.pureguard.mobile.ui.theme.PgAccentBlue
 import com.pureguard.mobile.ui.theme.PgMuted
 import com.pureguard.mobile.ui.theme.TbColor
@@ -73,7 +76,7 @@ private const val PREF_PERMISSIONS_SEEN = "permissions_seen"
 
 private data class NavItem(val route: String, val label: String, val icon: @Composable () -> Unit)
 
-private enum class AppFlow { ONBOARDING, PERMISSIONS, MAIN }
+private enum class AppFlow { ONBOARDING, PERMISSIONS, LOCK_SETUP, MAIN }
 
 @Composable
 fun AppRoot(
@@ -140,6 +143,24 @@ fun AppRoot(
         }
     }
 
+    LaunchedEffect(
+        protectionState.loading,
+        protectionState.snapshot.lockState.hasPassword,
+        currentFlow
+    ) {
+        val onboardingDone = Prefs.getBoolean(PREF_ONBOARDING_DONE, false)
+        val permissionsSeen = Prefs.getBoolean(PREF_PERMISSIONS_SEEN, false)
+        if (
+            !protectionState.loading &&
+            onboardingDone &&
+            permissionsSeen &&
+            !protectionState.snapshot.lockState.hasPassword &&
+            currentFlow == AppFlow.MAIN
+        ) {
+            currentFlow = AppFlow.LOCK_SETUP
+        }
+    }
+
     AnimatedContent(
         targetState = currentFlow,
         transitionSpec = { fadeIn(tween(450)) togetherWith fadeOut(tween(300)) },
@@ -177,7 +198,23 @@ fun AppRoot(
                     },
                     onContinue = {
                         Prefs.putBoolean(PREF_PERMISSIONS_SEEN, true)
-                        currentFlow = AppFlow.MAIN
+                        currentFlow = if (protectionState.snapshot.lockState.hasPassword) {
+                            AppFlow.MAIN
+                        } else {
+                            AppFlow.LOCK_SETUP
+                        }
+                    }
+                )
+            }
+
+            AppFlow.LOCK_SETUP -> {
+                MandatoryLockPasswordScreen(
+                    onCreatePassword = { password, onDone ->
+                        protectionViewModel.setPassword("", password) { result ->
+                            val ok = result is RepoResult.Success
+                            if (ok) currentFlow = AppFlow.MAIN
+                            onDone(ok)
+                        }
                     }
                 )
             }
@@ -228,6 +265,7 @@ private fun MainAppScaffold(
     onOpenAccessibilitySettings: () -> Unit,
     onToggleVpn: () -> Unit
 ) {
+    var pendingProtectedPatch by remember { mutableStateOf<SettingsPatch?>(null) }
     val navItems = listOf(
         NavItem("home", "Home", { Icon(Icons.Default.Home, contentDescription = "Home") }),
         NavItem("analytics", "Analytics", { Icon(Icons.Default.Analytics, contentDescription = "Analytics") }),
@@ -289,20 +327,22 @@ private fun MainAppScaffold(
                     vpnNeedsConsent = vpnNeedsConsent,
                     onOpenAccessibilitySettings = onOpenAccessibilitySettings,
                     onToggleVpn = onToggleVpn,
-                    onPatch = { patch: SettingsPatch -> protectionViewModel.updateSettings(patch) },
+                    onPatch = { patch: SettingsPatch -> pendingProtectedPatch = patch },
                     onResetStats = protectionViewModel::resetStats
                 )
             }
             composable(NavRoutes.Settings.route) {
                 SettingsScreen(
                     state = protectionState,
-                    onSavePatch = { patch, password -> protectionViewModel.updateSettings(patch, password) },
-                    onVerifyPassword = { password, cb -> protectionViewModel.verifyPassword(password, cb) },
-                    onSetPassword = { oldPassword, newPassword ->
-                        protectionViewModel.setPassword(oldPassword, newPassword)
+                    onSavePatch = { patch, password, onDone ->
+                        protectionViewModel.updateSettings(patch, password) { result ->
+                            onDone(result is RepoResult.Success)
+                        }
                     },
-                    onRemovePassword = { password ->
-                        protectionViewModel.removePassword(password)
+                    onSetPassword = { oldPassword, newPassword, onDone ->
+                        protectionViewModel.setPassword(oldPassword, newPassword) { result ->
+                            onDone(result is RepoResult.Success)
+                        }
                     }
                 )
             }
@@ -315,6 +355,19 @@ private fun MainAppScaffold(
                     onResetStats = protectionViewModel::resetStats
                 )
             }
+        }
+
+        pendingProtectedPatch?.let { patch ->
+            PasswordGateDialog(
+                title = "Confirm setting change",
+                message = "Enter your lock password to apply this change.",
+                onDismiss = { pendingProtectedPatch = null },
+                onConfirm = { password ->
+                    protectionViewModel.updateSettings(patch, password) { result ->
+                        if (result is RepoResult.Success) pendingProtectedPatch = null
+                    }
+                }
+            )
         }
     }
 }

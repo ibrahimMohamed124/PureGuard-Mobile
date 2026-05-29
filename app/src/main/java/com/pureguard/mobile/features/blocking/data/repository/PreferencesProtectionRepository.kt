@@ -65,15 +65,11 @@ class PreferencesProtectionRepository(
     override suspend fun updateSettings(patch: SettingsPatch, password: String?): RepoResult {
         val snapshot = getSnapshot()
         if (snapshot.lockState.lockEnabled && patch.touchesProtectedFields()) {
-            val unlocked = unlockSessionManager.isUnlocked()
-            if (!unlocked) {
-                if (password.isNullOrBlank()) {
-                    return RepoResult.Error("Password required")
-                }
-                val valid = verifyPassword(password)
-                if (!valid) return RepoResult.Error("Wrong password")
-                unlockSessionManager.grantUnlock()
+            if (password.isNullOrBlank()) {
+                return RepoResult.Error("Password required")
             }
+            val valid = verifyPassword(password)
+            if (!valid) return RepoResult.Error("Wrong password")
         }
         context.dataStore.edit { prefs ->
             val current = prefs.toSettings()

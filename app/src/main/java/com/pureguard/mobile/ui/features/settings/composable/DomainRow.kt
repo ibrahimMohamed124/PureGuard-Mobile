@@ -26,7 +26,7 @@ import com.pureguard.mobile.ui.theme.PgMuted
 import com.pureguard.mobile.ui.theme.PgText
 
 @Composable
-private fun DomainRow(
+fun DomainRow(
     domain: String,
     accentColor: Color,
     enabled: Boolean,

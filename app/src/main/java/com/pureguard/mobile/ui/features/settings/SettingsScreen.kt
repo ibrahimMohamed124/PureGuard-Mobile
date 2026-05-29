@@ -22,9 +22,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Speed
@@ -41,14 +41,13 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -58,11 +57,11 @@ import androidx.compose.ui.unit.sp
 import com.pureguard.mobile.features.blocking.domain.model.Sensitivity
 import com.pureguard.mobile.features.blocking.domain.model.SettingsPatch
 import com.pureguard.mobile.features.blocking.presentation.viewmodel.ProtectionUiState
+import com.pureguard.mobile.ui.features.settings.composable.ChangeLockPasswordDialog
 import com.pureguard.mobile.ui.features.settings.composable.DomainManagerScreen
-import com.pureguard.mobile.ui.features.settings.composable.LockCard
+import com.pureguard.mobile.ui.features.settings.composable.PasswordGateDialog
 import com.pureguard.mobile.ui.features.settings.composable.SettingsSection
 import com.pureguard.mobile.ui.features.settings.composable.SettingsToggleRow
-import com.pureguard.mobile.ui.features.settings.composable.TamperProtectionCard
 import com.pureguard.mobile.ui.features.settings.composable.normalizeDomainCandidate
 import com.pureguard.mobile.ui.features.settings.composable.parseDomains
 import com.pureguard.mobile.ui.theme.PgAccentBlue
@@ -72,189 +71,110 @@ import com.pureguard.mobile.ui.theme.PgMuted
 import com.pureguard.mobile.ui.theme.PgSuccess
 import com.pureguard.mobile.ui.theme.PgText
 import com.pureguard.mobile.ui.theme.TbColor
-import java.util.Collections.emptyList
 
-private enum class SettingsDestination { MAIN, WHITELIST, BLACKLIST }
+public enum class SettingsDestination { MAIN, WHITELIST, BLACKLIST }
+
+private data class PendingSettingChange(
+    val title: String,
+    val message: String,
+    val patch: SettingsPatch,
+    val confirmText: String = "Apply change",
+    val onSuccess: () -> Unit = {}
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     state: ProtectionUiState,
-    onSavePatch: (SettingsPatch, String?) -> Unit,
-    onVerifyPassword: (String, (Boolean) -> Unit) -> Unit,
-    onSetPassword: (String, String) -> Unit,
-    onRemovePassword: (String) -> Unit
+    onSavePatch: (SettingsPatch, String?, (Boolean) -> Unit) -> Unit,
+    onSetPassword: (String, String, (Boolean) -> Unit) -> Unit
 ) {
     val settings = state.snapshot.settings
     val lockState = state.snapshot.lockState
 
-    var enabled by rememberSaveable(settings.enabled) { mutableStateOf(settings.enabled) }
-    var safeSearch by rememberSaveable(settings.enforceSafeSearch) { mutableStateOf(settings.enforceSafeSearch) }
-    var imageScan by rememberSaveable(settings.enableImageScan) { mutableStateOf(settings.enableImageScan) }
-    var fastScan by rememberSaveable(settings.fastScan) { mutableStateOf(settings.fastScan) }
-    var fastScanLimit by rememberSaveable(settings.fastScanLimit) { mutableStateOf(settings.fastScanLimit.toString()) }
-    var strictMode by rememberSaveable(settings.strictMode) { mutableStateOf(settings.strictMode) }
-    var incognitoEnabled by rememberSaveable(settings.incognitoEnabled) { mutableStateOf(settings.incognitoEnabled) }
-    var sensitivity by rememberSaveable(settings.sensitivity.name) { mutableStateOf(settings.sensitivity) }
-    var whitelistText by rememberSaveable(settings.whitelist.joinToString("\n")) { mutableStateOf(settings.whitelist.joinToString("\n")) }
-    var blacklistText by rememberSaveable(settings.blacklist.joinToString("\n")) { mutableStateOf(settings.blacklist.joinToString("\n")) }
-
     var destination by rememberSaveable { mutableStateOf(SettingsDestination.MAIN) }
     var domainInput by rememberSaveable { mutableStateOf("") }
-
-    var unlockPassword by rememberSaveable { mutableStateOf("") }
-    var sessionPassword by rememberSaveable { mutableStateOf("") }
-    var newPassword by rememberSaveable { mutableStateOf("") }
-    var newPassword2 by rememberSaveable { mutableStateOf("") }
-    var oldPassword by rememberSaveable { mutableStateOf("") }
-    var removePassword by rememberSaveable { mutableStateOf("") }
-    var localUnlocked by rememberSaveable { mutableStateOf(false) }
-
-    val locked = lockState.hasPassword && !lockState.unlocked && !localUnlocked
-
-    LaunchedEffect(lockState.unlocked) {
-        if (lockState.unlocked) localUnlocked = true
+    var whitelistText by rememberSaveable(settings.whitelist.joinToString("\n")) {
+        mutableStateOf(settings.whitelist.joinToString("\n"))
     }
-    LaunchedEffect(locked) {
-        if (locked && destination != SettingsDestination.MAIN) {
-            destination = SettingsDestination.MAIN
-            domainInput = ""
-        }
+    var blacklistText by rememberSaveable(settings.blacklist.joinToString("\n")) {
+        mutableStateOf(settings.blacklist.joinToString("\n"))
     }
+
+    var pendingChange by remember { mutableStateOf<PendingSettingChange?>(null) }
+    var showChangePasswordDialog by rememberSaveable { mutableStateOf(false) }
+    var showFastScanLimitDialog by rememberSaveable { mutableStateOf(false) }
 
     val appBarTitle = when (destination) {
         SettingsDestination.MAIN -> "Settings"
         SettingsDestination.WHITELIST -> "Whitelist"
         SettingsDestination.BLACKLIST -> "Blacklist"
     }
-
     val currentDomains = when (destination) {
         SettingsDestination.WHITELIST -> parseDomains(whitelistText)
         SettingsDestination.BLACKLIST -> parseDomains(blacklistText)
         SettingsDestination.MAIN -> emptyList()
     }
 
-    fun addDomain(domain: String) {
-        when (destination) {
-            SettingsDestination.WHITELIST -> whitelistText = (parseDomains(whitelistText) + domain).distinct().joinToString("\n")
-            SettingsDestination.BLACKLIST -> blacklistText = (parseDomains(blacklistText) + domain).distinct().joinToString("\n")
-            SettingsDestination.MAIN -> Unit
-        }
+    fun requestChange(change: PendingSettingChange) {
+        pendingChange = change
     }
 
-    fun removeDomain(domain: String) {
-        when (destination) {
-            SettingsDestination.WHITELIST -> whitelistText = parseDomains(whitelistText).filterNot { it == domain }.joinToString("\n")
-            SettingsDestination.BLACKLIST -> blacklistText = parseDomains(blacklistText).filterNot { it == domain }.joinToString("\n")
-            SettingsDestination.MAIN -> Unit
+    fun requestPatch(title: String, message: String, patch: SettingsPatch) {
+        requestChange(PendingSettingChange(title = title, message = message, patch = patch))
+    }
+
+    fun requestDomainPatch(domain: String, isAdd: Boolean) {
+        val whitelist = parseDomains(whitelistText)
+        val blacklist = parseDomains(blacklistText)
+        val isWhitelist = destination == SettingsDestination.WHITELIST
+        val nextDomains = if (isAdd) {
+            (currentDomains + domain).distinct()
+        } else {
+            currentDomains.filterNot { it == domain }
         }
+        val nextWhitelist = if (isWhitelist) nextDomains else whitelist
+        val nextBlacklist = if (isWhitelist) blacklist else nextDomains
+        val action = if (isAdd) "Add domain" else "Remove domain"
+
+        requestChange(
+            PendingSettingChange(
+                title = action,
+                message = "Enter your lock password to update domain rules.",
+                patch = SettingsPatch(whitelist = nextWhitelist, blacklist = nextBlacklist),
+                confirmText = action,
+                onSuccess = {
+                    whitelistText = nextWhitelist.joinToString("\n")
+                    blacklistText = nextBlacklist.joinToString("\n")
+                    if (isAdd) domainInput = ""
+                }
+            )
+        )
     }
 
     Scaffold(
         topBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        TbColor.copy(alpha = 0.92f)
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = Color.White.copy(0.06f)
-                    )
-                    .padding(
-                        top = 8.dp
-                    )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(72.dp)
-                        .padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-
-                    // Back Button
-                    if (destination != SettingsDestination.MAIN) {
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(Color.White.copy(0.05f))
-                                .clickable {
-                                    destination = SettingsDestination.MAIN
-                                    domainInput = ""
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = PgText,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(14.dp))
-                    }
-
-                    // Title + Subtitle
-                    Column(
-                        modifier = Modifier.weight(1f)
-                    ) {
-
-                        Text(
-                            text = appBarTitle,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = PgText
-                        )
-
-                        Text(
-                            text = when (destination) {
-                                SettingsDestination.MAIN ->
-                                    "Manage protection and security"
-
-                                SettingsDestination.WHITELIST ->
-                                    "Always allowed domains"
-
-                                SettingsDestination.BLACKLIST ->
-                                    "Always blocked domains"
-                            },
-                            fontSize = 12.sp,
-                            color = PgMuted
-                        )
-                    }
-
-                    // Right Status Badge
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                if (locked)
-                                    PgDanger.copy(0.15f)
-                                else
-                                    PgSuccess.copy(0.15f)
-                            )
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            text = if (locked) "Locked" else "Secure",
-                            color = if (locked) PgDanger else PgSuccess,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+            SettingsTopBar(
+                title = appBarTitle,
+                subtitle = when (destination) {
+                    SettingsDestination.MAIN -> "Manage protection and security"
+                    SettingsDestination.WHITELIST -> "Always allowed domains"
+                    SettingsDestination.BLACKLIST -> "Always blocked domains"
+                },
+                hasPassword = lockState.hasPassword,
+                showBack = destination != SettingsDestination.MAIN,
+                onBack = {
+                    destination = SettingsDestination.MAIN
+                    domainInput = ""
                 }
-            }
+            )
         },
         floatingActionButton = {
-            if (destination != SettingsDestination.MAIN && !locked) {
+            if (destination != SettingsDestination.MAIN) {
                 FloatingActionButton(
                     onClick = {
                         normalizeDomainCandidate(domainInput)?.let { normalized ->
-                            addDomain(normalized)
-                            domainInput = ""
+                            requestDomainPatch(normalized, isAdd = true)
                         }
                     },
                     containerColor = PgAccentBlue,
@@ -266,21 +186,6 @@ fun SettingsScreen(
         }
     ) { innerPadding ->
         if (destination == SettingsDestination.MAIN) {
-            val whitelistDomains = parseDomains(whitelistText)
-            val blacklistDomains = parseDomains(blacklistText)
-            val patch = SettingsPatch(
-                enabled = enabled,
-                sensitivity = sensitivity,
-                enforceSafeSearch = safeSearch,
-                enableImageScan = imageScan,
-                fastScan = fastScan,
-                fastScanLimit = fastScanLimit.toIntOrNull() ?: settings.fastScanLimit,
-                strictMode = strictMode,
-                whitelist = whitelistDomains,
-                blacklist = blacklistDomains,
-                incognitoEnabled = incognitoEnabled
-            )
-
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
@@ -291,18 +196,6 @@ fun SettingsScreen(
                 ),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                if (locked) {
-                    item { LockCard(unlockPassword, { unlockPassword = it }) { ok ->
-                        onVerifyPassword(unlockPassword) { result ->
-                            if (result) {
-                                localUnlocked = true
-                                sessionPassword = unlockPassword
-                                unlockPassword = ""
-                            }
-                        }
-                    } }
-                }
-
                 item {
                     SettingsSection(title = "Core protection") {
                         SettingsToggleRow(
@@ -310,36 +203,56 @@ fun SettingsScreen(
                             iconColor = PgAccentBlue,
                             title = "Enable PureGuard",
                             subtitle = "Master switch for all layers",
-                            checked = enabled,
-                            enabled = !locked,
-                            onCheckedChange = { enabled = it }
+                            checked = settings.enabled,
+                            onCheckedChange = {
+                                requestPatch(
+                                    title = "Enable PureGuard",
+                                    message = "Enter your lock password to change the master switch.",
+                                    patch = SettingsPatch(enabled = it)
+                                )
+                            }
                         )
                         SettingsToggleRow(
                             icon = Icons.Default.Search,
                             iconColor = PgAccentViolet,
                             title = "Force SafeSearch",
                             subtitle = "Rewrite search engines to strict mode",
-                            checked = safeSearch,
-                            enabled = !locked,
-                            onCheckedChange = { safeSearch = it }
+                            checked = settings.enforceSafeSearch,
+                            onCheckedChange = {
+                                requestPatch(
+                                    title = "Force SafeSearch",
+                                    message = "Enter your lock password to change SafeSearch.",
+                                    patch = SettingsPatch(enforceSafeSearch = it)
+                                )
+                            }
                         )
                         SettingsToggleRow(
                             icon = Icons.Default.Image,
                             iconColor = PgAccentBlue,
                             title = "On-device image scan",
                             subtitle = "Analyze page images locally",
-                            checked = imageScan,
-                            enabled = !locked,
-                            onCheckedChange = { imageScan = it }
+                            checked = settings.enableImageScan,
+                            onCheckedChange = {
+                                requestPatch(
+                                    title = "Image scan",
+                                    message = "Enter your lock password to change image scanning.",
+                                    patch = SettingsPatch(enableImageScan = it)
+                                )
+                            }
                         )
                         SettingsToggleRow(
                             icon = Icons.Default.Speed,
                             iconColor = PgSuccess,
                             title = "Fast scan",
                             subtitle = "Quick pass first, deep pass after",
-                            checked = fastScan,
-                            enabled = !locked,
-                            onCheckedChange = { fastScan = it },
+                            checked = settings.fastScan,
+                            onCheckedChange = {
+                                requestPatch(
+                                    title = "Fast scan",
+                                    message = "Enter your lock password to change fast scan.",
+                                    patch = SettingsPatch(fastScan = it)
+                                )
+                            },
                             showDivider = false
                         )
                     }
@@ -352,18 +265,28 @@ fun SettingsScreen(
                             iconColor = PgDanger,
                             title = "Strict mode",
                             subtitle = "Block suspicious pages immediately",
-                            checked = strictMode,
-                            enabled = !locked,
-                            onCheckedChange = { strictMode = it }
+                            checked = settings.strictMode,
+                            onCheckedChange = {
+                                requestPatch(
+                                    title = "Strict mode",
+                                    message = "Enter your lock password to change strict mode.",
+                                    patch = SettingsPatch(strictMode = it)
+                                )
+                            }
                         )
                         SettingsToggleRow(
                             icon = Icons.Default.VisibilityOff,
                             iconColor = PgAccentViolet,
                             title = "Block private tabs",
                             subtitle = "Prevent Incognito / Private browsing",
-                            checked = incognitoEnabled,
-                            enabled = !locked,
-                            onCheckedChange = { incognitoEnabled = it },
+                            checked = settings.incognitoEnabled,
+                            onCheckedChange = {
+                                requestPatch(
+                                    title = "Private tabs",
+                                    message = "Enter your lock password to change private tab blocking.",
+                                    patch = SettingsPatch(incognitoEnabled = it)
+                                )
+                            },
                             showDivider = false
                         )
                     }
@@ -373,27 +296,23 @@ fun SettingsScreen(
                     SettingsSection(title = "Filter sensitivity") {
                         Column(modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)) {
                             ModernSensitivitySelector(
-                                selected = sensitivity,
-                                enabled = !locked,
-                                onSelect = { sensitivity = it }
+                                selected = settings.sensitivity,
+                                onSelect = {
+                                    requestPatch(
+                                        title = "Filter sensitivity",
+                                        message = "Enter your lock password to change sensitivity.",
+                                        patch = SettingsPatch(sensitivity = it)
+                                    )
+                                }
                             )
                             Spacer(Modifier.height(12.dp))
-                            OutlinedTextField(
-                                value = fastScanLimit,
-                                onValueChange = { fastScanLimit = it.filter { c -> c.isDigit() } },
-                                label = { Text("Fast-scan image budget (4–40)", color = PgMuted, fontSize = 13.sp) },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(14.dp),
-                                enabled = !locked,
-                                singleLine = true,
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = PgAccentBlue,
-                                    unfocusedBorderColor = Color.White.copy(0.12f),
-                                    focusedTextColor = PgText,
-                                    unfocusedTextColor = PgText,
-                                    disabledTextColor = PgMuted,
-                                    disabledBorderColor = Color.White.copy(0.06f)
-                                )
+                            SettingsActionRow(
+                                icon = Icons.Default.Speed,
+                                iconColor = PgAccentBlue,
+                                title = "Fast-scan image budget",
+                                subtitle = "${settings.fastScanLimit} images per pass",
+                                onClick = { showFastScanLimitDialog = true },
+                                showDivider = false
                             )
                         }
                     }
@@ -406,71 +325,37 @@ fun SettingsScreen(
                             iconColor = PgSuccess,
                             title = "Whitelist",
                             subtitle = "Domains that are always allowed",
-                            count = whitelistDomains.size,
-                            enabled = !locked,
-                            onClick = { destination = SettingsDestination.WHITELIST; domainInput = "" }
+                            count = parseDomains(whitelistText).size,
+                            onClick = {
+                                destination = SettingsDestination.WHITELIST
+                                domainInput = ""
+                            }
                         )
                         DomainNavRow(
                             icon = Icons.Default.Block,
                             iconColor = PgDanger,
                             title = "Blacklist",
                             subtitle = "Domains that are always blocked",
-                            count = blacklistDomains.size,
-                            enabled = !locked,
+                            count = parseDomains(blacklistText).size,
                             showDivider = false,
-                            onClick = { destination = SettingsDestination.BLACKLIST; domainInput = "" }
+                            onClick = {
+                                destination = SettingsDestination.BLACKLIST
+                                domainInput = ""
+                            }
                         )
                     }
                 }
 
                 item {
-                    TamperProtectionCard(
-                        hasPassword = lockState.hasPassword,
-                        locked = locked,
-                        oldPassword = oldPassword,
-                        newPassword = newPassword,
-                        newPassword2 = newPassword2,
-                        removePassword = removePassword,
-                        onOldPasswordChange = { oldPassword = it },
-                        onNewPasswordChange = { newPassword = it },
-                        onNewPassword2Change = { newPassword2 = it },
-                        onRemovePasswordChange = { removePassword = it },
-                        onSetPassword = {
-                            if (newPassword.isNotBlank() && newPassword == newPassword2) {
-                                onSetPassword(oldPassword, newPassword)
-                                oldPassword = ""; newPassword = ""; newPassword2 = ""
-                            }
-                        },
-                        onRemovePassword = {
-                            onRemovePassword(removePassword)
-                            removePassword = ""; localUnlocked = false; sessionPassword = ""
-                        }
-                    )
-                }
-
-                item {
-                    Box(modifier = Modifier.padding(top = 4.dp)) {
-                        Button(
-                            onClick = { onSavePatch(patch, sessionPassword.ifBlank { null }) },
-                            enabled = !locked,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = PgAccentBlue,
-                                disabledContainerColor = Color.White.copy(0.07f)
-                            )
-                        ) {
-                            Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                "Save settings",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF0A0F1E)
-                            )
-                        }
+                    SettingsSection(title = "Security") {
+                        SettingsActionRow(
+                            icon = Icons.Default.Lock,
+                            iconColor = PgAccentBlue,
+                            title = "Change lock password",
+                            subtitle = "Update the password used for protected changes",
+                            onClick = { showChangePasswordDialog = true },
+                            showDivider = false
+                        )
                     }
                 }
             }
@@ -478,12 +363,115 @@ fun SettingsScreen(
             DomainManagerScreen(
                 destination = destination,
                 domains = currentDomains,
-                locked = locked,
+                locked = false,
                 domainInput = domainInput,
                 onDomainInputChange = { domainInput = it },
-                onDeleteDomain = { removeDomain(it) },
+                onDeleteDomain = { requestDomainPatch(it, isAdd = false) },
                 innerPadding = innerPadding
             )
+        }
+    }
+
+    pendingChange?.let { change ->
+        PasswordGateDialog(
+            title = change.title,
+            message = change.message,
+            confirmText = change.confirmText,
+            onDismiss = { pendingChange = null },
+            onConfirm = { password ->
+                onSavePatch(change.patch, password) { ok ->
+                    if (ok) {
+                        change.onSuccess()
+                        pendingChange = null
+                    }
+                }
+            }
+        )
+    }
+
+    if (showChangePasswordDialog) {
+        ChangeLockPasswordDialog(
+            onDismiss = { showChangePasswordDialog = false },
+            onConfirm = { oldPassword, newPassword ->
+                onSetPassword(oldPassword, newPassword) { ok ->
+                    if (ok) showChangePasswordDialog = false
+                }
+            }
+        )
+    }
+
+    if (showFastScanLimitDialog) {
+        FastScanLimitDialog(
+            currentValue = settings.fastScanLimit,
+            onDismiss = { showFastScanLimitDialog = false },
+            onConfirm = { newLimit, password ->
+                onSavePatch(SettingsPatch(fastScanLimit = newLimit), password) { ok ->
+                    if (ok) showFastScanLimitDialog = false
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun SettingsTopBar(
+    title: String,
+    subtitle: String,
+    hasPassword: Boolean,
+    showBack: Boolean,
+    onBack: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(TbColor.copy(alpha = 0.92f))
+            .border(width = 1.dp, color = Color.White.copy(0.06f))
+            .padding(top = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(72.dp)
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (showBack) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color.White.copy(0.05f))
+                        .clickable(onClick = onBack),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = PgText,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = PgText)
+                Text(subtitle, fontSize = 12.sp, color = PgMuted)
+            }
+
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (hasPassword) PgSuccess.copy(0.15f) else PgDanger.copy(0.15f))
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = if (hasPassword) "Secure" else "Required",
+                    color = if (hasPassword) PgSuccess else PgDanger,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
@@ -495,15 +483,14 @@ private fun DomainNavRow(
     title: String,
     subtitle: String,
     count: Int,
-    enabled: Boolean,
     showDivider: Boolean = true,
     onClick: () -> Unit
 ) {
-    Column(modifier = Modifier.alpha(if (enabled) 1f else 0.5f)) {
+    Column {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier)
+                .clickable(onClick = onClick)
                 .padding(vertical = 14.dp, horizontal = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -537,9 +524,46 @@ private fun DomainNavRow(
 }
 
 @Composable
+private fun SettingsActionRow(
+    icon: ImageVector,
+    iconColor: Color,
+    title: String,
+    subtitle: String,
+    showDivider: Boolean = true,
+    onClick: () -> Unit
+) {
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(vertical = 14.dp, horizontal = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(iconColor.copy(0.1f), RoundedCornerShape(10.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, null, tint = iconColor, modifier = Modifier.size(18.dp))
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = PgText)
+                Text(subtitle, fontSize = 12.sp, color = PgMuted)
+            }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = PgMuted, modifier = Modifier.size(18.dp))
+        }
+        if (showDivider) {
+            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(0.05f)))
+        }
+    }
+}
+
+@Composable
 private fun ModernSensitivitySelector(
     selected: Sensitivity,
-    enabled: Boolean,
     onSelect: (Sensitivity) -> Unit
 ) {
     val options = Sensitivity.entries
@@ -558,14 +582,13 @@ private fun ModernSensitivitySelector(
                 Sensitivity.LOW -> PgSuccess
                 Sensitivity.MEDIUM -> PgAccentBlue
                 Sensitivity.HIGH -> PgDanger
-                else -> PgAccentViolet
             }
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(8.dp))
                     .background(if (active) activeColor.copy(0.2f) else Color.Transparent)
-                    .then(if (enabled) Modifier.clickable { onSelect(option) } else Modifier)
+                    .clickable { onSelect(option) }
                     .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -580,3 +603,67 @@ private fun ModernSensitivitySelector(
     }
 }
 
+@Composable
+private fun FastScanLimitDialog(
+    currentValue: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (Int, String) -> Unit
+) {
+    var value by rememberSaveable(currentValue) { mutableStateOf(currentValue.toString()) }
+    var password by rememberSaveable { mutableStateOf("") }
+    val parsed = value.toIntOrNull()?.coerceIn(4, 40)
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(24.dp))
+                .background(TbColor.copy(alpha = 0.98f))
+                .border(1.dp, Color.White.copy(0.08f), RoundedCornerShape(24.dp))
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text("Fast-scan image budget", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = PgText)
+            Text("Choose a value from 4 to 40 and confirm with your lock password.", fontSize = 12.sp, color = PgMuted)
+            val fieldColors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = PgAccentBlue,
+                unfocusedBorderColor = Color.White.copy(0.12f),
+                focusedTextColor = PgText,
+                unfocusedTextColor = PgText,
+                disabledTextColor = PgMuted,
+                disabledBorderColor = Color.White.copy(0.06f)
+            )
+            OutlinedTextField(
+                value = value,
+                onValueChange = { value = it.filter { c -> c.isDigit() }.take(2) },
+                label = { Text("Image budget", color = PgMuted, fontSize = 13.sp) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+                colors = fieldColors
+            )
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Password", color = PgMuted, fontSize = 13.sp) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                colors = fieldColors
+            )
+            Button(
+                onClick = { parsed?.let { onConfirm(it, password) } },
+                enabled = parsed != null && password.isNotBlank(),
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PgAccentBlue,
+                    disabledContainerColor = Color.White.copy(0.07f)
+                )
+            ) {
+                Text("Apply change", color = Color(0xFF0A0F1E), fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
