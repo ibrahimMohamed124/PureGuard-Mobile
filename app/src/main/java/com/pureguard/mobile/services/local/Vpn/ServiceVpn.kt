@@ -12,6 +12,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.pureguard.mobile.R
+import com.pureguard.mobile.services.local.background.ProtectionAlertNotifier
 
 @SuppressLint("VpnServicePolicy")
 class ServiceVpn : VpnService() {
@@ -43,6 +44,8 @@ class ServiceVpn : VpnService() {
                     blockedPackages.clear()
                     tearDownTunnel()
                     stopForeground(STOP_FOREGROUND_REMOVE)
+                    isTunnelActive = false
+                    ProtectionAlertNotifier.showVpnDisabled(this)
                     stopSelf()
                     return START_NOT_STICKY
                 }
@@ -71,6 +74,7 @@ class ServiceVpn : VpnService() {
         tearDownTunnel()
         isTunnelActive = false
         stopForeground(STOP_FOREGROUND_REMOVE)
+        ProtectionAlertNotifier.showVpnDisabled(this)
         stopSelf()
         super.onRevoke()
     }

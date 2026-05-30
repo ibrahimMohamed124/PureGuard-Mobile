@@ -13,6 +13,7 @@ import com.pureguard.mobile.features.blocking.domain.model.DecisionType
 import com.pureguard.mobile.features.blocking.domain.model.PageSignals
 import com.pureguard.mobile.features.blocking.presentation.ui.BlockedContentActivity
 import com.pureguard.mobile.services.local.background.BrowserBlockBridge
+import com.pureguard.mobile.services.local.background.ProtectionAlertNotifier
 import com.pureguard.mobile.services.local.BrowserPackageCatalog
 import com.pureguard.mobile.services.local.Vpn.ServiceVpn
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -120,6 +121,7 @@ class BrowserAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         scope.cancel()
+        ProtectionAlertNotifier.showAccessibilityDisabled(this)
         super.onDestroy()
     }
 
