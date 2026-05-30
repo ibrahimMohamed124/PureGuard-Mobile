@@ -21,7 +21,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -29,6 +31,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -36,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -266,108 +270,194 @@ private fun MainAppScaffold(
     onToggleVpn: () -> Unit
 ) {
     var pendingProtectedPatch by remember { mutableStateOf<SettingsPatch?>(null) }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val drawerScope = rememberCoroutineScope()
+    var drawerTheme by rememberSaveable {
+        mutableStateOf(Prefs.getString(PREF_DRAWER_THEME, "Dark").orEmpty().ifBlank { "Dark" })
+    }
+    var drawerLanguage by rememberSaveable {
+        mutableStateOf(Prefs.getString(PREF_DRAWER_LANGUAGE, "English").orEmpty().ifBlank { "English" })
+    }
     val navItems = listOf(
         NavItem("home", "Home", { Icon(Icons.Default.Home, contentDescription = "Home") }),
         NavItem("analytics", "Analytics", { Icon(Icons.Default.Analytics, contentDescription = "Analytics") }),
         NavItem("settings", "Settings", { Icon(Icons.Default.Settings, contentDescription = "Settings") })
     )
+    val entry by navController.currentBackStackEntryAsState()
+    val currentRoute = entry?.destination?.route
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHost) },
-        bottomBar = {
-            val entry by navController.currentBackStackEntryAsState()
-            val current = entry?.destination?.route
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(TbColor.copy(alpha = 0.92f))
-                    .border(1.dp, Color.White.copy(0.06f))
-            ) {
-                NavigationBar(
-                    containerColor = Color.Transparent,
-                    tonalElevation = 0.dp
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            AppDrawer(
+                selectedTheme = drawerTheme,
+                currentRoute = currentRoute,
+                onNavigate = { route ->
+                    if (currentRoute != route) {
+                        navController.navigate(route) {
+                            launchSingleTop = true
+                        }
+                    }
+                    drawerScope.launch { drawerState.close() }
+                }
+            )
+        }
+    ) {
+        Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHost) },
+            bottomBar = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(TbColor.copy(alpha = 0.92f))
+                        .border(1.dp, Color.White.copy(0.06f))
                 ) {
-                    navItems.forEach { item ->
-                        NavigationBarItem(
-                            selected = current == item.route,
-                            onClick = {
-                                navController.navigate(item.route) {
+                    NavigationBar(
+                        containerColor = Color.Transparent,
+                        tonalElevation = 0.dp
+                    ) {
+                        navItems.forEach { item ->
+                            NavigationBarItem(
+                                selected = currentRoute == item.route,
+                                onClick = {
+                                    navController.navigate(item.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        restoreState = true
+                                        launchSingleTop = true
+                                    }
+                                },
+                                icon = item.icon,
+                                label = { Text(item.label) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = PgAccentBlue,
+                                    selectedTextColor = PgAccentBlue,
+                                    unselectedIconColor = PgMuted,
+                                    unselectedTextColor = PgMuted,
+                                    indicatorColor = PgAccentBlue.copy(alpha = 0.14f)
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        ) { padding ->
+            NavHost(
+                navController = navController,
+                startDestination = NavRoutes.Home.route,
+                modifier = Modifier.padding(padding)
+            ) {
+                composable(NavRoutes.Home.route) {
+                    HomeScreen(
+                        state = protectionState,
+                        accessibilityEnabled = accessibilityEnabled,
+                        vpnActive = vpnActive,
+                        vpnNeedsConsent = vpnNeedsConsent,
+                        onOpenAccessibilitySettings = onOpenAccessibilitySettings,
+                        onToggleVpn = onToggleVpn,
+                        onOpenDrawer = { drawerScope.launch { drawerState.open() } },
+                        onPatch = { patch: SettingsPatch -> pendingProtectedPatch = patch },
+                        onResetStats = protectionViewModel::resetStats
+                    )
+                }
+                composable(NavRoutes.Settings.route) {
+                    SettingsScreen(
+                        state = protectionState,
+                        onOpenDrawer = { drawerScope.launch { drawerState.open() } },
+                        onSavePatch = { patch, password, onDone ->
+                            protectionViewModel.updateSettings(patch, password) { result ->
+                                onDone(result is RepoResult.Success)
+                            }
+                        },
+                        onSetPassword = { oldPassword, newPassword, onDone ->
+                            protectionViewModel.setPassword(oldPassword, newPassword) { result ->
+                                onDone(result is RepoResult.Success)
+                            }
+                        }
+                    )
+                }
+                composable(NavRoutes.Analytics.route) {
+                    AnalyticsScreen(
+                        state = protectionState,
+                        accessibilityEnabled = accessibilityEnabled,
+                        vpnNeedsConsent = vpnNeedsConsent,
+                        vpnActive = vpnActive,
+                        onOpenDrawer = { drawerScope.launch { drawerState.open() } },
+                        onResetStats = protectionViewModel::resetStats
+                    )
+                }
+                composable(NavRoutes.Preferences.route) {
+                    PreferencesDrawerPage(
+                        selectedTheme = drawerTheme,
+                        selectedLanguage = drawerLanguage,
+                        onThemeSelected = {
+                            drawerTheme = it
+                            Prefs.putString(PREF_DRAWER_THEME, it)
+                        },
+                        onLanguageSelected = {
+                            drawerLanguage = it
+                            Prefs.putString(PREF_DRAWER_LANGUAGE, it)
+                        },
+                        onBack = {
+                            if (!navController.navigateUp()) {
+                                navController.navigate(NavRoutes.Home.route) {
                                     popUpTo(navController.graph.findStartDestination().id) {
                                         saveState = true
                                     }
                                     restoreState = true
                                     launchSingleTop = true
                                 }
-                            },
-                            icon = item.icon,
-                            label = { Text(item.label) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = PgAccentBlue,
-                                selectedTextColor = PgAccentBlue,
-                                unselectedIconColor = PgMuted,
-                                unselectedTextColor = PgMuted,
-                                indicatorColor = PgAccentBlue.copy(alpha = 0.14f)
-                            )
-                        )
-                    }
+                            }
+                        }
+                    )
+                }
+                composable(NavRoutes.Support.route) {
+                    SupportDrawerPage(
+                        selectedTheme = drawerTheme,
+                        onBack = {
+                            if (!navController.navigateUp()) {
+                                navController.navigate(NavRoutes.Home.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    restoreState = true
+                                    launchSingleTop = true
+                                }
+                            }
+                        }
+                    )
+                }
+                composable(NavRoutes.Faqs.route) {
+                    FaqsDrawerPage(
+                        selectedTheme = drawerTheme,
+                        onBack = {
+                            if (!navController.navigateUp()) {
+                                navController.navigate(NavRoutes.Home.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    restoreState = true
+                                    launchSingleTop = true
+                                }
+                            }
+                        }
+                    )
                 }
             }
-        }
-    ) { padding ->
-        NavHost(
-            navController = navController,
-            startDestination = NavRoutes.Home.route,
-            modifier = Modifier.padding(padding)
-        ) {
-            composable(NavRoutes.Home.route) {
-                HomeScreen(
-                    state = protectionState,
-                    accessibilityEnabled = accessibilityEnabled,
-                    vpnActive = vpnActive,
-                    vpnNeedsConsent = vpnNeedsConsent,
-                    onOpenAccessibilitySettings = onOpenAccessibilitySettings,
-                    onToggleVpn = onToggleVpn,
-                    onPatch = { patch: SettingsPatch -> pendingProtectedPatch = patch },
-                    onResetStats = protectionViewModel::resetStats
-                )
-            }
-            composable(NavRoutes.Settings.route) {
-                SettingsScreen(
-                    state = protectionState,
-                    onSavePatch = { patch, password, onDone ->
-                        protectionViewModel.updateSettings(patch, password) { result ->
-                            onDone(result is RepoResult.Success)
-                        }
-                    },
-                    onSetPassword = { oldPassword, newPassword, onDone ->
-                        protectionViewModel.setPassword(oldPassword, newPassword) { result ->
-                            onDone(result is RepoResult.Success)
-                        }
-                    }
-                )
-            }
-            composable(NavRoutes.Analytics.route) {
-                AnalyticsScreen(
-                    state = protectionState,
-                    accessibilityEnabled = accessibilityEnabled,
-                    vpnNeedsConsent = vpnNeedsConsent,
-                    vpnActive = vpnActive,
-                    onResetStats = protectionViewModel::resetStats
-                )
-            }
-        }
 
-        pendingProtectedPatch?.let { patch ->
-            PasswordGateDialog(
-                title = "Confirm setting change",
-                message = "Enter your lock password to apply this change.",
-                onDismiss = { pendingProtectedPatch = null },
-                onConfirm = { password ->
-                    protectionViewModel.updateSettings(patch, password) { result ->
-                        if (result is RepoResult.Success) pendingProtectedPatch = null
+            pendingProtectedPatch?.let { patch ->
+                PasswordGateDialog(
+                    title = "Confirm setting change",
+                    message = "Enter your lock password to apply this change.",
+                    onDismiss = { pendingProtectedPatch = null },
+                    onConfirm = { password ->
+                        protectionViewModel.updateSettings(patch, password) { result ->
+                            if (result is RepoResult.Success) pendingProtectedPatch = null
+                        }
                     }
-                }
-            )
+                )
+            }
         }
     }
 }

@@ -2,11 +2,13 @@ package com.pureguard.mobile.ui.features.analytics
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Accessibility
 import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
@@ -57,6 +60,7 @@ fun AnalyticsScreen(
     vpnNeedsConsent: Boolean,
     accessibilityEnabled: Boolean,
     vpnActive: Boolean,
+    onOpenDrawer: () -> Unit = {},
     onResetStats: () -> Unit
 ) {
     val stats = state.snapshot.stats
@@ -78,7 +82,8 @@ fun AnalyticsScreen(
         topBar = {
             AnalyticsTopBar(
                 hasTelemetry = hasTelemetry,
-                vpnReady = vpnReady
+                vpnReady = vpnReady,
+                onOpenDrawer = onOpenDrawer
             )
         }
     ) { innerPadding ->
@@ -230,7 +235,8 @@ fun AnalyticsScreen(
 @Composable
 private fun AnalyticsTopBar(
     hasTelemetry: Boolean,
-    vpnReady: Boolean
+    vpnReady: Boolean,
+    onOpenDrawer: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -246,6 +252,23 @@ private fun AnalyticsTopBar(
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color.White.copy(0.05f))
+                    .clickable(onClick = onOpenDrawer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Menu,
+                    contentDescription = "Open menu",
+                    tint = PgText,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Analytics",

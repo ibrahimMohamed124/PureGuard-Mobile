@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Speed
@@ -86,6 +87,7 @@ private data class PendingSettingChange(
 @Composable
 fun SettingsScreen(
     state: ProtectionUiState,
+    onOpenDrawer: () -> Unit = {},
     onSavePatch: (SettingsPatch, String?, (Boolean) -> Unit) -> Unit,
     onSetPassword: (String, String, (Boolean) -> Unit) -> Unit
 ) {
@@ -166,7 +168,8 @@ fun SettingsScreen(
                 onBack = {
                     destination = SettingsDestination.MAIN
                     domainInput = ""
-                }
+                },
+                onOpenDrawer = onOpenDrawer
             )
         },
         floatingActionButton = {
@@ -419,7 +422,8 @@ private fun SettingsTopBar(
     subtitle: String,
     hasPassword: Boolean,
     showBack: Boolean,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onOpenDrawer: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -447,6 +451,23 @@ private fun SettingsTopBar(
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
+                        tint = PgText,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color.White.copy(0.05f))
+                        .clickable(onClick = onOpenDrawer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Menu,
+                        contentDescription = "Open menu",
                         tint = PgText,
                         modifier = Modifier.size(20.dp)
                     )

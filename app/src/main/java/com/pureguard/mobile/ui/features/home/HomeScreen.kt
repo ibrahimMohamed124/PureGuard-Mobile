@@ -19,12 +19,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -69,6 +71,7 @@ fun HomeScreen(
     vpnNeedsConsent: Boolean,
     onOpenAccessibilitySettings: () -> Unit,
     onToggleVpn: () -> Unit,
+    onOpenDrawer: () -> Unit = {},
     onPatch: (SettingsPatch) -> Unit,
     onResetStats: () -> Unit
 ) {
@@ -108,7 +111,8 @@ fun HomeScreen(
         topBar = {
             HomeTopBar(
                 statusLabel = statusLabel,
-                statusColor = statusColor
+                statusColor = statusColor,
+                onOpenDrawer = onOpenDrawer
             )
         }
     ) { innerPadding ->
@@ -359,7 +363,8 @@ fun HomeScreen(
 @Composable
 private fun HomeTopBar(
     statusLabel: String,
-    statusColor: Color
+    statusColor: Color,
+    onOpenDrawer: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -375,6 +380,23 @@ private fun HomeTopBar(
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color.White.copy(0.05f))
+                    .clickable(onClick = onOpenDrawer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Menu,
+                    contentDescription = "Open menu",
+                    tint = PgText,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Home",
