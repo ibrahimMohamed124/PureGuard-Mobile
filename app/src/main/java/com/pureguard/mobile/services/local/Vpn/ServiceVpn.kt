@@ -12,6 +12,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.pureguard.mobile.R
+import com.pureguard.mobile.core.localization.AppLanguage
 import com.pureguard.mobile.services.local.background.ProtectionAlertNotifier
 
 @SuppressLint("VpnServicePolicy")
@@ -81,6 +82,10 @@ class ServiceVpn : VpnService() {
 
     override fun onBind(intent: Intent?) = super.onBind(intent)
 
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLanguage.wrap(newBase))
+    }
+
     private fun syncTunnel() {
         if (blockedPackages.isEmpty()) {
             tearDownTunnel()
@@ -129,9 +134,9 @@ class ServiceVpn : VpnService() {
     private fun startAsForeground() {
         ensureChannel()
         val notification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL)
-            .setSmallIcon(R.drawable.ic_pureguard)
-            .setContentTitle("PureGuard VPN shield")
-            .setContentText("Blocking risky browser session")
+            .setSmallIcon(R.drawable.ic_notification_pureguard)
+            .setContentTitle(getString(R.string.notification_vpn_foreground_title))
+            .setContentText(getString(R.string.notification_vpn_foreground_start))
             .setOngoing(true)
             .build()
         startForeground(NOTIFICATION_ID, notification)
@@ -140,13 +145,13 @@ class ServiceVpn : VpnService() {
     private fun updateForegroundText() {
         ensureChannel()
         val text = if (blockedPackages.size == 1) {
-            "1 browser is currently blocked"
+            getString(R.string.notification_vpn_one_browser_blocked)
         } else {
-            "${blockedPackages.size} browsers are currently blocked"
+            getString(R.string.notification_vpn_many_browsers_blocked, blockedPackages.size)
         }
         val notification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL)
-            .setSmallIcon(R.drawable.ic_pureguard)
-            .setContentTitle("PureGuard VPN shield")
+            .setSmallIcon(R.drawable.ic_notification_pureguard)
+            .setContentTitle(getString(R.string.notification_vpn_foreground_title))
             .setContentText(text)
             .setOngoing(true)
             .build()
@@ -157,10 +162,15 @@ class ServiceVpn : VpnService() {
     private fun ensureChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        if (manager.getNotificationChannel(NOTIFICATION_CHANNEL) != null) return
+        val existing = manager.getNotificationChannel(NOTIFICATION_CHANNEL)
+        if (existing != null) {
+            existing.setName(getString(R.string.notification_vpn_channel))
+            manager.createNotificationChannel(existing)
+            return
+        }
         val channel = NotificationChannel(
             NOTIFICATION_CHANNEL,
-            "PureGuard VPN",
+            getString(R.string.notification_vpn_channel),
             NotificationManager.IMPORTANCE_LOW
         )
         manager.createNotificationChannel(channel)

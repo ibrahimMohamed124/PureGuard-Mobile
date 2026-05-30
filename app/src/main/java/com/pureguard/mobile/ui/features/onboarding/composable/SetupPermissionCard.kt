@@ -27,6 +27,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.pureguard.mobile.R
 import com.pureguard.mobile.ui.theme.PgMuted
 import com.pureguard.mobile.ui.theme.PgSuccess
 import com.pureguard.mobile.ui.theme.PgText
@@ -90,7 +92,11 @@ fun PermissionCard(
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = if (isGranted) "Active" else "Required",
+                            text = if (isGranted) {
+                                stringResource(R.string.common_active)
+                            } else {
+                                stringResource(R.string.common_required)
+                            },
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = if (isGranted) PgSuccess else PgMuted
@@ -107,7 +113,7 @@ fun PermissionCard(
                 if (!isGranted && onClick != null) {
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "Tap to enable →",
+                        text = stringResource(R.string.permissions_tap_to_enable),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = iconTint

@@ -20,7 +20,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.pureguard.mobile.R
 import com.pureguard.mobile.ui.theme.PgDanger
 import com.pureguard.mobile.ui.theme.PgMuted
 import com.pureguard.mobile.ui.theme.PgText
@@ -55,7 +57,7 @@ fun DomainRow(
             IconButton(onClick = onDelete, enabled = enabled, modifier = Modifier.size(32.dp)) {
                 Icon(
                     imageVector = Icons.Default.DeleteOutline,
-                    contentDescription = "Remove",
+                    contentDescription = stringResource(R.string.common_remove),
                     tint = if (enabled) PgDanger.copy(0.7f) else PgMuted,
                     modifier = Modifier.size(18.dp)
                 )

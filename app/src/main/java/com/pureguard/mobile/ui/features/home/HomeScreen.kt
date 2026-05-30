@@ -51,6 +51,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.pureguard.mobile.R
 import com.pureguard.mobile.features.blocking.domain.model.Sensitivity
 import com.pureguard.mobile.features.blocking.domain.model.SettingsPatch
 import com.pureguard.mobile.features.blocking.presentation.viewmodel.ProtectionUiState
@@ -97,14 +99,14 @@ fun HomeScreen(
         else -> PgDanger
     }
     val statusLabel = when {
-        isFullyActive -> "Fully Protected"
-        isPartiallyActive -> "Partially Active"
-        else -> "Protection Off"
+        isFullyActive -> stringResource(R.string.home_status_fully_protected)
+        isPartiallyActive -> stringResource(R.string.home_status_partially_active)
+        else -> stringResource(R.string.home_status_off)
     }
     val statusSubtitle = when {
-        isFullyActive -> "All layers active — you're safe"
-        isPartiallyActive -> "Enable all layers for full coverage"
-        else -> "Turn on PureGuard to protect your device"
+        isFullyActive -> stringResource(R.string.home_status_fully_subtitle)
+        isPartiallyActive -> stringResource(R.string.home_status_partially_subtitle)
+        else -> stringResource(R.string.home_status_off_subtitle)
     }
 
     Scaffold(
@@ -127,7 +129,7 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                HomeSection(title = "Protection status") {
+                HomeSection(title = stringResource(R.string.home_section_protection_status)) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -198,9 +200,9 @@ fun HomeScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
-                                StatPill(label = "Blocked", value = "${stats.blockedCount}", color = PgDanger)
-                                StatPill(label = "Scanned", value = "${stats.scannedCount}", color = PgAccentBlue)
-                                StatPill(label = "DNS", value = "${stats.dnsBlockedCount}", color = PgAccentViolet)
+                                StatPill(label = stringResource(R.string.home_stat_blocked), value = "${stats.blockedCount}", color = PgDanger)
+                                StatPill(label = stringResource(R.string.home_stat_scanned), value = "${stats.scannedCount}", color = PgAccentBlue)
+                                StatPill(label = stringResource(R.string.home_stat_dns), value = "${stats.dnsBlockedCount}", color = PgAccentViolet)
                             }
                         }
                     }
@@ -208,7 +210,7 @@ fun HomeScreen(
             }
 
             item {
-                HomeSection(title = "Core protection") {
+                HomeSection(title = stringResource(R.string.home_section_core_protection)) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -218,13 +220,13 @@ fun HomeScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                "Enable PureGuard",
+                                stringResource(R.string.home_enable_pureguard),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.SemiBold,
                                 color = PgText
                             )
                             Text(
-                                "Master protection switch",
+                                stringResource(R.string.home_master_switch),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = PgMuted
                             )
@@ -248,7 +250,7 @@ fun HomeScreen(
                         ) {
                             Icon(Icons.Default.Lock, null, tint = PgAccentBlue, modifier = Modifier.size(14.dp))
                             Text(
-                                "Tamper lock enabled",
+                                stringResource(R.string.home_tamper_lock_enabled),
                                 fontSize = 12.sp,
                                 color = PgAccentBlue,
                                 fontWeight = FontWeight.SemiBold
@@ -259,12 +261,12 @@ fun HomeScreen(
             }
 
             item {
-                HomeSection(title = "Protection layers") {
+                HomeSection(title = stringResource(R.string.home_section_protection_layers)) {
                     FeatureToggleRow(
                         icon = Icons.Default.Search,
                         iconColor = PgAccentViolet,
-                        title = "Force SafeSearch",
-                        subtitle = "Enforce strict mode on Google, Bing & YouTube",
+                        title = stringResource(R.string.home_force_safesearch),
+                        subtitle = stringResource(R.string.home_force_safesearch_subtitle),
                         checked = settings.enforceSafeSearch,
                         onCheckedChange = { onPatch(SettingsPatch(enforceSafeSearch = it)) },
                         enabled = settings.enabled
@@ -272,8 +274,8 @@ fun HomeScreen(
                     FeatureToggleRow(
                         icon = Icons.Default.Image,
                         iconColor = PgAccentBlue,
-                        title = "On-device image scan",
-                        subtitle = "Scan page images locally before displaying",
+                        title = stringResource(R.string.home_image_scan),
+                        subtitle = stringResource(R.string.home_image_scan_subtitle),
                         checked = settings.enableImageScan,
                         onCheckedChange = { onPatch(SettingsPatch(enableImageScan = it)) },
                         enabled = settings.enabled,
@@ -283,9 +285,9 @@ fun HomeScreen(
             }
 
             item {
-                HomeSection(title = "Filter sensitivity") {
+                HomeSection(title = stringResource(R.string.home_section_filter_sensitivity)) {
                     Text(
-                        text = "Higher levels block content more aggressively",
+                        text = stringResource(R.string.home_sensitivity_helper),
                         style = MaterialTheme.typography.bodySmall,
                         color = PgMuted,
                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
@@ -299,7 +301,7 @@ fun HomeScreen(
             }
 
             item {
-                HomeSection(title = "Session stats") {
+                HomeSection(title = stringResource(R.string.home_section_session_stats)) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -308,12 +310,12 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Current session counters",
+                            stringResource(R.string.home_current_session_counters),
                             style = MaterialTheme.typography.bodySmall,
                             color = PgMuted
                         )
                         TextButton(onClick = onResetStats) {
-                            Text("Reset", fontSize = 13.sp, color = PgMuted)
+                            Text(stringResource(R.string.home_reset), fontSize = 13.sp, color = PgMuted)
                         }
                     }
 
@@ -323,13 +325,13 @@ fun HomeScreen(
                     ) {
                         LargeStatCard(
                             modifier = Modifier.weight(1f),
-                            label = "Pages blocked",
+                            label = stringResource(R.string.home_pages_blocked),
                             value = "${stats.blockedCount}",
                             color = PgDanger
                         )
                         LargeStatCard(
                             modifier = Modifier.weight(1f),
-                            label = "Pages scanned",
+                            label = stringResource(R.string.home_pages_scanned),
                             value = "${stats.scannedCount}",
                             color = PgAccentBlue
                         )
@@ -343,13 +345,13 @@ fun HomeScreen(
                     ) {
                         LargeStatCard(
                             modifier = Modifier.weight(1f),
-                            label = "DNS blocked",
+                            label = stringResource(R.string.home_dns_blocked),
                             value = "${stats.dnsBlockedCount}",
                             color = PgAccentViolet
                         )
                         LargeStatCard(
                             modifier = Modifier.weight(1f),
-                            label = "SafeSearch enforced",
+                            label = stringResource(R.string.home_safesearch_enforced),
                             value = "${stats.safeSearchRewriteCount}",
                             color = PgSuccess
                         )
@@ -390,7 +392,7 @@ private fun HomeTopBar(
             ) {
                 Icon(
                     Icons.Default.Menu,
-                    contentDescription = "Open menu",
+                    contentDescription = stringResource(R.string.common_open_menu),
                     tint = PgText,
                     modifier = Modifier.size(20.dp)
                 )
@@ -399,13 +401,13 @@ private fun HomeTopBar(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Home",
+                    text = stringResource(R.string.nav_home),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = PgText
                 )
                 Text(
-                    text = "Your live protection dashboard",
+                    text = stringResource(R.string.home_top_subtitle),
                     fontSize = 12.sp,
                     color = PgMuted
                 )
@@ -573,7 +575,7 @@ private fun SensitivitySelector(
     ) {
         options.forEach { option ->
             val active = selected == option
-            val label = option.name.lowercase().replaceFirstChar { it.titlecase() }
+            val label = sensitivityLabel(option)
             val bgAlpha by animateFloatAsState(
                 targetValue = if (active) 1f else 0f,
                 animationSpec = tween(200),
@@ -603,5 +605,14 @@ private fun SensitivitySelector(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun sensitivityLabel(option: Sensitivity): String {
+    return when (option) {
+        Sensitivity.LOW -> stringResource(R.string.sensitivity_low)
+        Sensitivity.MEDIUM -> stringResource(R.string.sensitivity_medium)
+        Sensitivity.HIGH -> stringResource(R.string.sensitivity_high)
     }
 }

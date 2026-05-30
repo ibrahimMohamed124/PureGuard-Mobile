@@ -1,10 +1,13 @@
 package com.pureguard.mobile.activities
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
+import com.pureguard.mobile.R
+import com.pureguard.mobile.core.localization.AppLanguage
 
 class AccessibilitySettingsActivity : Activity() {
 
@@ -26,10 +29,14 @@ class AccessibilitySettingsActivity : Activity() {
             }.onFailure {
                 Toast.makeText(
                     this,
-                    "Open Accessibility settings to re-enable PureGuard",
+                    getString(R.string.open_accessibility_settings_to_reenable),
                     Toast.LENGTH_LONG
                 ).show()
             }
         }
+    }
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLanguage.wrap(newBase))
     }
 }

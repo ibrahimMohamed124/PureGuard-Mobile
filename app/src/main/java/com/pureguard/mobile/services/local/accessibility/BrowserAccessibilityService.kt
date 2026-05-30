@@ -3,12 +3,15 @@ package com.pureguard.mobile.services.local.accessibility
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.annotation.SuppressLint
+import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.pureguard.mobile.PureGuardApp
+import com.pureguard.mobile.R
+import com.pureguard.mobile.core.localization.AppLanguage
 import com.pureguard.mobile.features.blocking.domain.model.DecisionType
 import com.pureguard.mobile.features.blocking.domain.model.PageSignals
 import com.pureguard.mobile.features.blocking.presentation.ui.BlockedContentActivity
@@ -119,6 +122,10 @@ class BrowserAccessibilityService : AccessibilityService() {
 
     override fun onInterrupt() = Unit
 
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLanguage.wrap(newBase))
+    }
+
     override fun onDestroy() {
         scope.cancel()
         ProtectionAlertNotifier.showAccessibilityDisabled(this)
@@ -147,7 +154,7 @@ class BrowserAccessibilityService : AccessibilityService() {
             blockAndShow(
                 packageName = packageName,
                 blockedUrl = url,
-                reason = "Private browsing is disabled in settings"
+                reason = getString(R.string.blocked_reason_private)
             )
             repository.bumpBlocked()
             repository.bumpPrivateModeBlocked()
@@ -169,7 +176,7 @@ class BrowserAccessibilityService : AccessibilityService() {
         val shouldBlock = decision.type == DecisionType.BLOCK || strictModeBlock
         if (shouldBlock) {
             val reason = if (strictModeBlock) {
-                "Strict mode: ${decision.reason}"
+                getString(R.string.blocked_reason_strict, decision.reason)
             } else {
                 decision.reason
             }
@@ -299,7 +306,7 @@ class BrowserAccessibilityService : AccessibilityService() {
         blockAndShow(
             packageName = packageName,
             blockedUrl = blockedUrl,
-            reason = "Private browsing is disabled in settings"
+            reason = getString(R.string.blocked_reason_private)
         )
         lastPrivateModeBlockedPackage = packageName
         lastPrivateModeBlockAt = now

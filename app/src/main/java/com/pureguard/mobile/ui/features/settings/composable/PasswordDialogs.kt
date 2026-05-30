@@ -41,6 +41,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.res.stringResource
+import com.pureguard.mobile.R
 import com.pureguard.mobile.ui.GradientBackground
 import com.pureguard.mobile.ui.theme.PgAccentBlue
 import com.pureguard.mobile.ui.theme.PgDanger
@@ -52,7 +54,7 @@ import com.pureguard.mobile.ui.theme.TbColor
 fun PasswordGateDialog(
     title: String,
     message: String,
-    confirmText: String = "Apply change",
+    confirmText: String,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit
 ) {
@@ -64,7 +66,7 @@ fun PasswordGateDialog(
             PasswordField(
                 value = password,
                 onValueChange = { password = it },
-                label = "Password"
+                label = stringResource(R.string.common_password)
             )
             Button(
                 onClick = { onConfirm(password) },
@@ -79,7 +81,7 @@ fun PasswordGateDialog(
                 Text(confirmText, color = Color(0xFF0A0F1E), fontWeight = FontWeight.SemiBold)
             }
             TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
-                Text("Cancel", color = PgMuted, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.common_cancel), color = PgMuted, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -96,18 +98,18 @@ fun ChangeLockPasswordDialog(
     Dialog(onDismissRequest = onDismiss) {
         PasswordDialogSurface {
             DialogHeader(
-                title = "Change lock password",
-                message = "Confirm your current password, then choose the new one."
+                title = stringResource(R.string.password_dialog_change_title),
+                message = stringResource(R.string.password_dialog_change_message)
             )
             PasswordField(
                 value = oldPassword,
                 onValueChange = { oldPassword = it },
-                label = "Old password"
+                label = stringResource(R.string.password_old)
             )
             PasswordField(
                 value = newPassword,
                 onValueChange = { newPassword = it },
-                label = "New password"
+                label = stringResource(R.string.password_new)
             )
             Button(
                 onClick = { onConfirm(oldPassword, newPassword) },
@@ -119,10 +121,10 @@ fun ChangeLockPasswordDialog(
                     disabledContainerColor = Color.White.copy(0.07f)
                 )
             ) {
-                Text("Change password", color = Color(0xFF0A0F1E), fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.password_change_button), color = Color(0xFF0A0F1E), fontWeight = FontWeight.SemiBold)
             }
             TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
-                Text("Cancel", color = PgMuted, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.common_cancel), color = PgMuted, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -135,6 +137,9 @@ fun MandatoryLockPasswordScreen(
     var password by rememberSaveable { mutableStateOf("") }
     var confirm by rememberSaveable { mutableStateOf("") }
     var localError by rememberSaveable { mutableStateOf("") }
+    val minCharsError = stringResource(R.string.password_error_min_chars)
+    val mismatchError = stringResource(R.string.password_error_no_match)
+    val createFailedError = stringResource(R.string.password_error_create_failed)
 
     GradientBackground {
         Box(
@@ -164,34 +169,34 @@ fun MandatoryLockPasswordScreen(
                     Icon(Icons.Default.Lock, null, tint = PgAccentBlue, modifier = Modifier.size(28.dp))
                 }
                 Text(
-                    text = "Create lock password",
+                    text = stringResource(R.string.password_create_title),
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = PgText,
                     textAlign = TextAlign.Center
                 )
                 Text(
-                    text = "PureGuard needs a lock password before settings can be changed.",
+                    text = stringResource(R.string.password_create_message),
                     fontSize = 13.sp,
                     color = PgMuted,
                     textAlign = TextAlign.Center,
                     lineHeight = 19.sp
                 )
-                PasswordField(password, { password = it }, "New password")
-                PasswordField(confirm, { confirm = it }, "Confirm password")
+                PasswordField(password, { password = it }, stringResource(R.string.password_new))
+                PasswordField(confirm, { confirm = it }, stringResource(R.string.password_confirm))
                 if (localError.isNotBlank()) {
                     Text(localError, color = PgDanger, fontSize = 12.sp)
                 }
                 Button(
                     onClick = {
                         localError = when {
-                            password.length < 4 -> "Password must be at least 4 characters"
-                            password != confirm -> "Passwords do not match"
+                            password.length < 4 -> minCharsError
+                            password != confirm -> mismatchError
                             else -> ""
                         }
                         if (localError.isBlank()) {
                             onCreatePassword(password) { ok ->
-                                if (!ok) localError = "Could not create password"
+                                if (!ok) localError = createFailedError
                             }
                         }
                     },
@@ -200,7 +205,7 @@ fun MandatoryLockPasswordScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = PgAccentBlue)
                 ) {
-                    Text("Continue", color = Color(0xFF0A0F1E), fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.common_continue), color = Color(0xFF0A0F1E), fontWeight = FontWeight.SemiBold)
                 }
             }
         }

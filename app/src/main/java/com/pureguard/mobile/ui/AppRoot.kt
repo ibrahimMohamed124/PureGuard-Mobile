@@ -47,7 +47,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.pureguard.mobile.R
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -61,6 +63,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.pureguard.mobile.core.datastore.Prefs
+import com.pureguard.mobile.core.localization.AppLanguage
 import com.pureguard.mobile.core.navigation.NavRoutes
 import com.pureguard.mobile.features.blocking.domain.model.SettingsPatch
 import com.pureguard.mobile.features.blocking.presentation.state.RepoResult
@@ -159,8 +162,9 @@ fun AppRoot(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    LaunchedEffect(protectionState.toastMessage) {
-        protectionState.toastMessage?.let {
+    val localizedToast = protectionState.toastMessage?.let { localizedToastMessage(it) }
+    LaunchedEffect(localizedToast) {
+        localizedToast?.let {
             snackbarHost.showSnackbar(it)
             protectionViewModel.consumeToast()
         }
@@ -288,6 +292,7 @@ private fun MainAppScaffold(
     onOpenAccessibilitySettings: () -> Unit,
     onToggleVpn: () -> Unit
 ) {
+    val context = LocalContext.current
     var pendingProtectedPatch by remember { mutableStateOf<SettingsPatch?>(null) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val drawerScope = rememberCoroutineScope()
@@ -295,12 +300,12 @@ private fun MainAppScaffold(
         mutableStateOf(Prefs.getString(PREF_DRAWER_THEME, "Dark").orEmpty().ifBlank { "Dark" })
     }
     var drawerLanguage by rememberSaveable {
-        mutableStateOf(Prefs.getString(PREF_DRAWER_LANGUAGE, "English").orEmpty().ifBlank { "English" })
+        mutableStateOf(AppLanguage.get(context))
     }
     val navItems = listOf(
-        NavItem("home", "Home", { Icon(Icons.Default.Home, contentDescription = "Home") }),
-        NavItem("analytics", "Analytics", { Icon(Icons.Default.Analytics, contentDescription = "Analytics") }),
-        NavItem("settings", "Settings", { Icon(Icons.Default.Settings, contentDescription = "Settings") })
+        NavItem(NavRoutes.Home.route, stringResource(R.string.nav_home), { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.nav_home)) }),
+        NavItem(NavRoutes.Analytics.route, stringResource(R.string.nav_analytics), { Icon(Icons.Default.Analytics, contentDescription = stringResource(R.string.nav_analytics)) }),
+        NavItem(NavRoutes.Settings.route, stringResource(R.string.nav_settings), { Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.nav_settings)) })
     )
     val entry by navController.currentBackStackEntryAsState()
     val currentRoute = entry?.destination?.route
@@ -416,7 +421,8 @@ private fun MainAppScaffold(
                         },
                         onLanguageSelected = {
                             drawerLanguage = it
-                            Prefs.putString(PREF_DRAWER_LANGUAGE, it)
+                            AppLanguage.set(context, it)
+                            (context as? Activity)?.recreate()
                         },
                         onBack = {
                             if (!navController.navigateUp()) {
@@ -467,8 +473,9 @@ private fun MainAppScaffold(
 
             pendingProtectedPatch?.let { patch ->
                 PasswordGateDialog(
-                    title = "Confirm setting change",
-                    message = "Enter your lock password to apply this change.",
+                    title = stringResource(R.string.common_confirm_setting_change),
+                    message = stringResource(R.string.common_confirm_setting_message),
+                    confirmText = stringResource(R.string.common_apply_change),
                     onDismiss = { pendingProtectedPatch = null },
                     onConfirm = { password ->
                         protectionViewModel.updateSettings(patch, password) { result ->
@@ -478,5 +485,21 @@ private fun MainAppScaffold(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun localizedToastMessage(message: String): String {
+    return when (message) {
+        "Settings saved" -> stringResource(R.string.toast_settings_saved)
+        "Password updated" -> stringResource(R.string.toast_password_updated)
+        "Password removed" -> stringResource(R.string.toast_password_removed)
+        "Wrong password" -> stringResource(R.string.toast_wrong_password)
+        "Stats reset" -> stringResource(R.string.toast_stats_reset)
+        "Password required" -> stringResource(R.string.repo_password_required)
+        "Password must be at least 4 characters" -> stringResource(R.string.repo_password_min_chars)
+        "Current password is required" -> stringResource(R.string.repo_current_password_required)
+        "Wrong current password" -> stringResource(R.string.repo_wrong_current_password)
+        else -> message
     }
 }

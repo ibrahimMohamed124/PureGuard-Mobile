@@ -15,6 +15,7 @@ import androidx.core.content.ContextCompat
 import com.pureguard.mobile.R
 import com.pureguard.mobile.activities.AccessibilitySettingsActivity
 import com.pureguard.mobile.activities.VpnPermissionActivity
+import com.pureguard.mobile.core.localization.AppLanguage
 
 object ProtectionAlertNotifier {
 
@@ -25,7 +26,8 @@ object ProtectionAlertNotifier {
     @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
     fun showAccessibilityDisabled(context: Context) {
         if (!canPostNotifications(context)) return
-        ensureChannel(context)
+        val localizedContext = AppLanguage.wrap(context)
+        ensureChannel(localizedContext)
 
         val intent = Intent(context, AccessibilitySettingsActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -38,12 +40,12 @@ object ProtectionAlertNotifier {
         )
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_pureguard)
-            .setContentTitle("PureGuard protection disabled")
-            .setContentText("Accessibility monitor was turned off. Tap to re-enable protection.")
+            .setSmallIcon(R.drawable.ic_notification_pureguard)
+            .setContentTitle(localizedContext.getString(R.string.notification_accessibility_title))
+            .setContentText(localizedContext.getString(R.string.notification_accessibility_text))
             .setStyle(
                 NotificationCompat.BigTextStyle()
-                    .bigText("Accessibility monitor was turned off, so PureGuard cannot watch browser URLs. Tap to open Accessibility settings and turn it back on.")
+                    .bigText(localizedContext.getString(R.string.notification_accessibility_big))
             )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
@@ -60,7 +62,8 @@ object ProtectionAlertNotifier {
     @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
     fun showVpnDisabled(context: Context) {
         if (!canPostNotifications(context)) return
-        ensureChannel(context)
+        val localizedContext = AppLanguage.wrap(context)
+        ensureChannel(localizedContext)
 
         val intent = Intent(context, VpnPermissionActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -73,12 +76,12 @@ object ProtectionAlertNotifier {
         )
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_pureguard)
-            .setContentTitle("PureGuard VPN disabled")
-            .setContentText("VPN shield was turned off. Tap to enable it again.")
+            .setSmallIcon(R.drawable.ic_notification_pureguard)
+            .setContentTitle(localizedContext.getString(R.string.notification_vpn_title))
+            .setContentText(localizedContext.getString(R.string.notification_vpn_text))
             .setStyle(
                 NotificationCompat.BigTextStyle()
-                    .bigText("VPN shield was turned off, so network-level protection is disabled. Tap to show the Android VPN permission prompt and enable PureGuard again.")
+                    .bigText(localizedContext.getString(R.string.notification_vpn_big))
             )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
@@ -95,13 +98,19 @@ object ProtectionAlertNotifier {
     private fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (manager.getNotificationChannel(CHANNEL_ID) != null) return
+        val existing = manager.getNotificationChannel(CHANNEL_ID)
+        if (existing != null) {
+            existing.setName(context.getString(R.string.notification_protection_channel))
+            existing.description = context.getString(R.string.notification_protection_channel_description)
+            manager.createNotificationChannel(existing)
+            return
+        }
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "PureGuard protection alerts",
+            context.getString(R.string.notification_protection_channel),
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = "Alerts when VPN or Accessibility protection is turned off."
+            description = context.getString(R.string.notification_protection_channel_description)
         }
         manager.createNotificationChannel(channel)
     }

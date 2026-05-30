@@ -43,6 +43,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.pureguard.mobile.R
 import com.pureguard.mobile.features.blocking.presentation.viewmodel.ProtectionUiState
 import com.pureguard.mobile.ui.theme.PgAccentBlue
 import com.pureguard.mobile.ui.theme.PgAccentViolet
@@ -98,10 +100,10 @@ fun AnalyticsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                AnalyticsSection(title = "Protection overview") {
+                AnalyticsSection(title = stringResource(R.string.analytics_section_overview)) {
                     if (hasTelemetry) {
                         Text(
-                            text = "Your session at a glance",
+                            text = stringResource(R.string.analytics_session_glance),
                             style = MaterialTheme.typography.bodySmall,
                             color = PgMuted,
                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
@@ -116,11 +118,11 @@ fun AnalyticsScreen(
                                 .padding(vertical = 16.dp),
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            BigMetric(value = "${stats.blockedCount}", label = "Blocked", color = PgDanger)
+                            BigMetric(value = "${stats.blockedCount}", label = stringResource(R.string.home_stat_blocked), color = PgDanger)
                             VerticalDivider()
-                            BigMetric(value = "${stats.scannedCount}", label = "Allowed", color = PgSuccess)
+                            BigMetric(value = "${stats.scannedCount}", label = stringResource(R.string.analytics_allowed), color = PgSuccess)
                             VerticalDivider()
-                            BigMetric(value = "$protectionRate%", label = "Block rate", color = PgAccentBlue)
+                            BigMetric(value = "$protectionRate%", label = stringResource(R.string.analytics_block_rate), color = PgAccentBlue)
                         }
                     } else {
                         EmptyAnalyticsState()
@@ -130,21 +132,21 @@ fun AnalyticsScreen(
 
             if (hasTelemetry) {
                 item {
-                    AnalyticsSection(title = "Activity breakdown") {
+                    AnalyticsSection(title = stringResource(R.string.analytics_section_activity)) {
                         Text(
-                            text = "Detailed view of all protection actions",
+                            text = stringResource(R.string.analytics_activity_helper),
                             style = MaterialTheme.typography.bodySmall,
                             color = PgMuted,
                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
                         )
 
-                        ActivityRow("SafeSearch enforced", "${stats.safeSearchRewriteCount} times", PgAccentViolet)
-                        ActivityRow("Allowed once (override)", "${stats.allowOnceCount} times", PgAccentBlue)
-                        ActivityRow("DNS filter blocks", "${stats.dnsBlockedCount}", PgDanger)
-                        ActivityRow("Keyword & content blocks", "${stats.keywordBlockedCount}", PgDanger)
-                        ActivityRow("Private mode blocks", "${stats.privateModeBlockedCount}", PgDanger)
+                        ActivityRow(stringResource(R.string.analytics_activity_safesearch), stringResource(R.string.analytics_times, stats.safeSearchRewriteCount), PgAccentViolet)
+                        ActivityRow(stringResource(R.string.analytics_activity_allow_once), stringResource(R.string.analytics_times, stats.allowOnceCount), PgAccentBlue)
+                        ActivityRow(stringResource(R.string.analytics_activity_dns), "${stats.dnsBlockedCount}", PgDanger)
+                        ActivityRow(stringResource(R.string.analytics_activity_keyword), "${stats.keywordBlockedCount}", PgDanger)
+                        ActivityRow(stringResource(R.string.analytics_activity_private), "${stats.privateModeBlockedCount}", PgDanger)
                         ActivityRow(
-                            label = "Strict mode blocks",
+                            label = stringResource(R.string.analytics_activity_strict),
                             value = "${stats.strictModeBlockedCount}",
                             accent = PgAccentViolet,
                             showDivider = false
@@ -154,9 +156,9 @@ fun AnalyticsScreen(
             }
 
             item {
-                AnalyticsSection(title = "Shield status") {
+                AnalyticsSection(title = stringResource(R.string.analytics_section_shield_status)) {
                     Text(
-                        text = "Real-time health of your protection layers",
+                        text = stringResource(R.string.analytics_shield_helper),
                         style = MaterialTheme.typography.bodySmall,
                         color = PgMuted,
                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
@@ -166,11 +168,11 @@ fun AnalyticsScreen(
                         icon = Icons.Default.Accessibility,
                         iconBg = if (accessibilityEnabled) PgSuccess.copy(0.12f) else PgDanger.copy(0.12f),
                         iconTint = if (accessibilityEnabled) PgSuccess else PgDanger,
-                        title = "Screen monitor",
+                        title = stringResource(R.string.analytics_screen_monitor),
                         message = if (accessibilityEnabled)
-                            "Active — watching browsers in real time"
+                            stringResource(R.string.analytics_screen_active)
                         else
-                            "Disabled — browser URLs cannot be monitored",
+                            stringResource(R.string.analytics_screen_disabled),
                         isActive = accessibilityEnabled
                     )
 
@@ -180,11 +182,11 @@ fun AnalyticsScreen(
                         icon = Icons.Default.Wifi,
                         iconBg = if (vpnReady) PgSuccess.copy(0.12f) else PgDanger.copy(0.12f),
                         iconTint = if (vpnReady) PgSuccess else PgDanger,
-                        title = "VPN shield",
+                        title = stringResource(R.string.analytics_vpn_shield),
                         message = if (vpnReady)
-                            "Running — filtering network traffic"
+                            stringResource(R.string.analytics_vpn_running)
                         else
-                            "Inactive — network-level blocking is off",
+                            stringResource(R.string.analytics_vpn_inactive),
                         isActive = vpnReady
                     )
 
@@ -204,9 +206,9 @@ fun AnalyticsScreen(
                             Icon(Icons.Default.Lightbulb, null, tint = PgAccentBlue, modifier = Modifier.size(16.dp))
                             Text(
                                 text = if (hasTelemetry)
-                                    "Keep both layers active together for the strongest protection."
+                                    stringResource(R.string.analytics_tip_with_data)
                                 else
-                                    "Browse normally and PureGuard will build your insights automatically.",
+                                    stringResource(R.string.analytics_tip_empty),
                                 fontSize = 13.sp,
                                 color = PgMuted,
                                 lineHeight = 18.sp
@@ -225,7 +227,7 @@ fun AnalyticsScreen(
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(0.07f))
                 ) {
-                    Text("Reset all analytics", color = PgMuted, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.analytics_reset_all), color = PgMuted, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -262,7 +264,7 @@ private fun AnalyticsTopBar(
             ) {
                 Icon(
                     Icons.Default.Menu,
-                    contentDescription = "Open menu",
+                    contentDescription = stringResource(R.string.common_open_menu),
                     tint = PgText,
                     modifier = Modifier.size(20.dp)
                 )
@@ -271,16 +273,16 @@ private fun AnalyticsTopBar(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Analytics",
+                    text = stringResource(R.string.analytics_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = PgText
                 )
                 Text(
                     text = if (hasTelemetry)
-                        "Real-time protection insights"
+                        stringResource(R.string.analytics_subtitle_with_data)
                     else
-                        "Protection activity will appear here",
+                        stringResource(R.string.analytics_subtitle_empty),
                     fontSize = 12.sp,
                     color = PgMuted
                 )
@@ -293,7 +295,7 @@ private fun AnalyticsTopBar(
                     .padding(horizontal = 10.dp, vertical = 6.dp)
             ) {
                 Text(
-                    text = if (vpnReady) "Protected" else "Limited",
+                    text = if (vpnReady) stringResource(R.string.analytics_protected) else stringResource(R.string.analytics_limited),
                     color = if (vpnReady) PgSuccess else PgDanger,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
@@ -435,7 +437,7 @@ private fun StatusRow(
                 .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
             Text(
-                text = if (isActive) "Active" else "Off",
+                text = if (isActive) stringResource(R.string.common_active) else stringResource(R.string.common_off),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = if (isActive) PgSuccess else PgDanger
@@ -478,13 +480,13 @@ private fun EmptyAnalyticsState() {
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
-                    "No threats detected yet",
+                    stringResource(R.string.analytics_empty_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = PgText
                 )
                 Text(
-                    "Analytics will appear here as PureGuard\nobserves your browsing activity.",
+                    stringResource(R.string.analytics_empty_body),
                     style = MaterialTheme.typography.bodySmall,
                     color = PgMuted,
                     textAlign = TextAlign.Center

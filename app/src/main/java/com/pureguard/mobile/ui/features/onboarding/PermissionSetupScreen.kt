@@ -56,6 +56,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.pureguard.mobile.R
 import com.pureguard.mobile.ui.features.onboarding.composable.PermissionCard
 import com.pureguard.mobile.ui.theme.PgAccentBlue
 import com.pureguard.mobile.ui.theme.PgAccentViolet
@@ -160,7 +162,7 @@ fun PermissionSetupScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                text = "Activate Protection",
+                text = stringResource(R.string.permissions_title),
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 color = PgText,
@@ -170,7 +172,7 @@ fun PermissionSetupScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "Two permissions power PureGuard's defense.\nEnable both for complete protection.",
+                text = stringResource(R.string.permissions_subtitle),
                 fontSize = 15.sp,
                 color = PgMuted,
                 textAlign = TextAlign.Center,
@@ -183,8 +185,8 @@ fun PermissionSetupScreen(
                 icon = Icons.Default.Wifi,
                 iconTint = PgAccentViolet,
                 iconBg = Color(0xFF1E1050),
-                title = "VPN Shield",
-                description = "Routes network traffic through a local filter to block harmful requests at the network level.",
+                title = stringResource(R.string.permissions_vpn_title),
+                description = stringResource(R.string.permissions_vpn_description),
                 isGranted = vpnReady,
                 onClick = if (!vpnReady) onEnableVpn else null
             )
@@ -195,8 +197,8 @@ fun PermissionSetupScreen(
                 icon = Icons.Default.Accessibility,
                 iconTint = PgAccentBlue,
                 iconBg = Color(0xFF0F2744),
-                title = "Screen Monitor",
-                description = "Monitors browser address bars in real time to catch risky URLs before pages load.",
+                title = stringResource(R.string.permissions_accessibility_title),
+                description = stringResource(R.string.permissions_accessibility_description),
                 isGranted = accessibilityEnabled,
                 onClick = if (!accessibilityEnabled) onEnableAccessibility else null
             )
@@ -221,7 +223,7 @@ fun PermissionSetupScreen(
                         modifier = Modifier.size(18.dp)
                     )
                     Text(
-                        text = "All processing happens on your device. No data is sent to external servers.",
+                        text = stringResource(R.string.permissions_privacy_note),
                         fontSize = 13.sp,
                         color = PgMuted,
                         lineHeight = 19.sp
@@ -247,7 +249,11 @@ fun PermissionSetupScreen(
                     label = "btn"
                 ) { allGranted ->
                     Text(
-                        text = if (allGranted) "Protection Active — Continue" else "Continue Anyway",
+                        text = if (allGranted) {
+                            stringResource(R.string.permissions_continue_active)
+                        } else {
+                            stringResource(R.string.permissions_continue_anyway)
+                        },
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = if (allGranted) Color(0xFF071A0F) else Color(0xFF0A0F1E)
@@ -259,4 +265,3 @@ fun PermissionSetupScreen(
         }
     }
 }
-

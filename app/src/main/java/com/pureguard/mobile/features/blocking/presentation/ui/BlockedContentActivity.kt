@@ -13,7 +13,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -41,8 +40,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
+import com.pureguard.mobile.R
 import com.pureguard.mobile.PureGuardApp
+import com.pureguard.mobile.core.localization.AppLanguage
 import com.pureguard.mobile.services.local.Vpn.ServiceVpn
 import com.pureguard.mobile.services.local.background.BrowserBlockBridge
 import com.pureguard.mobile.ui.GradientBackground
@@ -77,9 +79,9 @@ class BlockedContentActivity : ComponentActivity() {
         setContent {
             PureGuardTheme {
                 var password by remember { mutableStateOf("") }
-                var passwordError by remember { mutableStateOf<String?>(null) }
                 var submitting by remember { mutableStateOf(false) }
                 var status by remember { mutableStateOf("") }
+                val displayReason = remember(blockedReason) { localizedBlockedReason(blockedReason) }
 
                 GradientBackground {
                     Box(
@@ -106,31 +108,31 @@ class BlockedContentActivity : ComponentActivity() {
                                     modifier = Modifier.align(Alignment.CenterHorizontally)
                                 )
                                 Text(
-                                    text = "Page Blocked",
+                                    text = stringResource(R.string.blocked_page_title),
                                     style = MaterialTheme.typography.headlineSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = PgText,
                                     modifier = Modifier.align(Alignment.CenterHorizontally)
                                 )
                                 Text(
-                                    text = "PureGuard stopped this page to keep browsing safer.",
+                                    text = stringResource(R.string.blocked_page_message),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = PgMuted
                                 )
                                 HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
                                 Text(
-                                    text = "Reason",
+                                    text = stringResource(R.string.blocked_reason),
                                     style = MaterialTheme.typography.labelLarge,
                                     color = PgAccentBlue
                                 )
 
                                 Text(
-                                    text = blockedReason.ifBlank { "Suspicious content detected." },
+                                    text = displayReason,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = PgText
                                 )
                                 Text(
-                                    text = "URL",
+                                    text = stringResource(R.string.common_url),
                                     style = MaterialTheme.typography.labelLarge,
                                     color = PgMuted
                                 )
@@ -143,15 +145,8 @@ class BlockedContentActivity : ComponentActivity() {
                                 )
                                 OutlinedTextField(
                                     value = password,
-                                    onValueChange = {
-                                        password = it
-                                        passwordError = when {
-                                            it.isBlank() -> "Password required"
-                                            it.length < 4 -> "Password too short"
-                                            else -> null
-                                        }
-                                    },
-                                    label = { Text("Password (if lock is enabled)", color = PgMuted) },
+                                    onValueChange = { password = it },
+                                    label = { Text(stringResource(R.string.blocked_password_label), color = PgMuted) },
                                     modifier = Modifier.fillMaxWidth(),
                                     visualTransformation = PasswordVisualTransformation(),
                                     enabled = !submitting,
@@ -189,7 +184,7 @@ class BlockedContentActivity : ComponentActivity() {
                                         disabledContainerColor = Color.White.copy(0.07f)
                                     )
                                 ) {
-                                    Text("Allow once", color = Color(0xFF0A0F1E))
+                                    Text(stringResource(R.string.blocked_allow_once), color = Color(0xFF0A0F1E))
                                 }
                                 TextButton(
                                     onClick = {
@@ -201,7 +196,7 @@ class BlockedContentActivity : ComponentActivity() {
                                     modifier = Modifier.fillMaxWidth(),
                                     enabled = !submitting
                                 ) {
-                                    Text("Stay protected", color = PgAccentBlue)
+                                    Text(stringResource(R.string.blocked_stay_protected), color = PgAccentBlue)
                                 }
                             }
                         }
@@ -216,6 +211,10 @@ class BlockedContentActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLanguage.wrap(newBase))
     }
 
     override fun onStart() {
@@ -277,7 +276,7 @@ class BlockedContentActivity : ComponentActivity() {
             if (snapshot.lockState.lockEnabled && !snapshot.lockState.unlocked) {
                 val ok = repository.verifyPassword(password)
                 if (!ok) {
-                    onDone(false, "Wrong password")
+                    onDone(false, getString(R.string.blocked_wrong_password))
                     return@launch
                 }
             }
@@ -287,7 +286,7 @@ class BlockedContentActivity : ComponentActivity() {
             }.getOrNull().orEmpty()
 
             if (host.isBlank()) {
-                onDone(false, "Invalid URL")
+                onDone(false, getString(R.string.blocked_invalid_url))
                 return@launch
             }
 
@@ -297,7 +296,7 @@ class BlockedContentActivity : ComponentActivity() {
             }
             Toast.makeText(
                 this@BlockedContentActivity,
-                "Allowed once for $host",
+                getString(R.string.blocked_allowed_once_for, host),
                 Toast.LENGTH_SHORT
             ).show()
             onDone(true, "")
@@ -343,7 +342,32 @@ class BlockedContentActivity : ComponentActivity() {
                 putExtra(EXTRA_BROWSER_PACKAGE, browserPackage)
             }
             runCatching { context.startActivity(intent) }
-                .onFailure { Log.e(TAG, "Failed to start block activity", it) }
+                .onFailure { Log.e(TAG, context.getString(R.string.blocked_launch_failed), it) }
+        }
+    }
+
+    private fun localizedBlockedReason(reason: String): String {
+        if (reason.isBlank()) return getString(R.string.blocked_default_reason)
+        val language = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            resources.configuration.locales[0].language
+        } else {
+            @Suppress("DEPRECATION")
+            resources.configuration.locale.language
+        }
+        if (language != "ar") return reason
+        return when {
+            reason == getString(R.string.blocked_reason_private) -> reason
+            reason.startsWith("Private browsing", ignoreCase = true) -> getString(R.string.blocked_reason_private)
+            reason.startsWith("Strict mode", ignoreCase = true) ||
+                reason.startsWith("الوضع الصارم") -> getString(R.string.blocked_reason_strict_generic)
+            reason.startsWith("DNS layer:", ignoreCase = true) -> getString(R.string.blocked_reason_dns)
+            reason.startsWith("URL/keyword:", ignoreCase = true) -> getString(R.string.blocked_reason_keyword)
+            reason.startsWith("DNS suspect + metadata:", ignoreCase = true) -> getString(R.string.blocked_reason_metadata)
+            reason.startsWith("Metadata", ignoreCase = true) -> getString(R.string.blocked_reason_metadata)
+            reason.startsWith("User blacklist", ignoreCase = true) -> getString(R.string.blocked_reason_blacklist)
+            reason.startsWith("Cached flagged domain", ignoreCase = true) -> getString(R.string.blocked_reason_cached)
+            reason.startsWith("On-device image scan", ignoreCase = true) -> getString(R.string.blocked_reason_image)
+            else -> getString(R.string.blocked_default_reason)
         }
     }
 }

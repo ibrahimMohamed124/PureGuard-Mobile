@@ -52,9 +52,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pureguard.mobile.R
 import com.pureguard.mobile.features.blocking.domain.model.Sensitivity
 import com.pureguard.mobile.features.blocking.domain.model.SettingsPatch
 import com.pureguard.mobile.features.blocking.presentation.viewmodel.ProtectionUiState
@@ -79,7 +82,7 @@ private data class PendingSettingChange(
     val title: String,
     val message: String,
     val patch: SettingsPatch,
-    val confirmText: String = "Apply change",
+    val confirmText: String? = null,
     val onSuccess: () -> Unit = {}
 )
 
@@ -93,6 +96,7 @@ fun SettingsScreen(
 ) {
     val settings = state.snapshot.settings
     val lockState = state.snapshot.lockState
+    val context = LocalContext.current
 
     var destination by rememberSaveable { mutableStateOf(SettingsDestination.MAIN) }
     var domainInput by rememberSaveable { mutableStateOf("") }
@@ -108,9 +112,9 @@ fun SettingsScreen(
     var showFastScanLimitDialog by rememberSaveable { mutableStateOf(false) }
 
     val appBarTitle = when (destination) {
-        SettingsDestination.MAIN -> "Settings"
-        SettingsDestination.WHITELIST -> "Whitelist"
-        SettingsDestination.BLACKLIST -> "Blacklist"
+        SettingsDestination.MAIN -> stringResource(R.string.settings_title)
+        SettingsDestination.WHITELIST -> stringResource(R.string.settings_whitelist_title)
+        SettingsDestination.BLACKLIST -> stringResource(R.string.settings_blacklist_title)
     }
     val currentDomains = when (destination) {
         SettingsDestination.WHITELIST -> parseDomains(whitelistText)
@@ -137,12 +141,12 @@ fun SettingsScreen(
         }
         val nextWhitelist = if (isWhitelist) nextDomains else whitelist
         val nextBlacklist = if (isWhitelist) blacklist else nextDomains
-        val action = if (isAdd) "Add domain" else "Remove domain"
+        val action = if (isAdd) context.getString(R.string.settings_add_domain) else context.getString(R.string.settings_remove_domain)
 
         requestChange(
             PendingSettingChange(
                 title = action,
-                message = "Enter your lock password to update domain rules.",
+                message = context.getString(R.string.settings_domain_password_message),
                 patch = SettingsPatch(whitelist = nextWhitelist, blacklist = nextBlacklist),
                 confirmText = action,
                 onSuccess = {
@@ -159,9 +163,9 @@ fun SettingsScreen(
             SettingsTopBar(
                 title = appBarTitle,
                 subtitle = when (destination) {
-                    SettingsDestination.MAIN -> "Manage protection and security"
-                    SettingsDestination.WHITELIST -> "Always allowed domains"
-                    SettingsDestination.BLACKLIST -> "Always blocked domains"
+                    SettingsDestination.MAIN -> stringResource(R.string.settings_subtitle)
+                    SettingsDestination.WHITELIST -> stringResource(R.string.settings_whitelist_subtitle)
+                    SettingsDestination.BLACKLIST -> stringResource(R.string.settings_blacklist_subtitle)
                 },
                 hasPassword = lockState.hasPassword,
                 showBack = destination != SettingsDestination.MAIN,
@@ -183,7 +187,7 @@ fun SettingsScreen(
                     containerColor = PgAccentBlue,
                     contentColor = Color(0xFF0A0F1E)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add domain")
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.settings_add_domain))
                 }
             }
         }
@@ -200,17 +204,17 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 item {
-                    SettingsSection(title = "Core protection") {
+                    SettingsSection(title = stringResource(R.string.settings_section_core)) {
                         SettingsToggleRow(
                             icon = Icons.Default.Shield,
                             iconColor = PgAccentBlue,
-                            title = "Enable PureGuard",
-                            subtitle = "Master switch for all layers",
+                            title = stringResource(R.string.home_enable_pureguard),
+                            subtitle = stringResource(R.string.home_master_switch),
                             checked = settings.enabled,
                             onCheckedChange = {
                                 requestPatch(
-                                    title = "Enable PureGuard",
-                                    message = "Enter your lock password to change the master switch.",
+                                    title = context.getString(R.string.home_enable_pureguard),
+                                    message = context.getString(R.string.settings_enable_message),
                                     patch = SettingsPatch(enabled = it)
                                 )
                             }
@@ -218,13 +222,13 @@ fun SettingsScreen(
                         SettingsToggleRow(
                             icon = Icons.Default.Search,
                             iconColor = PgAccentViolet,
-                            title = "Force SafeSearch",
-                            subtitle = "Rewrite search engines to strict mode",
+                            title = stringResource(R.string.home_force_safesearch),
+                            subtitle = stringResource(R.string.settings_safesearch_subtitle),
                             checked = settings.enforceSafeSearch,
                             onCheckedChange = {
                                 requestPatch(
-                                    title = "Force SafeSearch",
-                                    message = "Enter your lock password to change SafeSearch.",
+                                    title = context.getString(R.string.home_force_safesearch),
+                                    message = context.getString(R.string.settings_safesearch_message),
                                     patch = SettingsPatch(enforceSafeSearch = it)
                                 )
                             }
@@ -232,13 +236,13 @@ fun SettingsScreen(
                         SettingsToggleRow(
                             icon = Icons.Default.Image,
                             iconColor = PgAccentBlue,
-                            title = "On-device image scan",
-                            subtitle = "Analyze page images locally",
+                            title = stringResource(R.string.home_image_scan),
+                            subtitle = stringResource(R.string.home_image_scan_subtitle),
                             checked = settings.enableImageScan,
                             onCheckedChange = {
                                 requestPatch(
-                                    title = "Image scan",
-                                    message = "Enter your lock password to change image scanning.",
+                                    title = context.getString(R.string.home_image_scan),
+                                    message = context.getString(R.string.settings_image_scan_message),
                                     patch = SettingsPatch(enableImageScan = it)
                                 )
                             }
@@ -246,13 +250,13 @@ fun SettingsScreen(
                         SettingsToggleRow(
                             icon = Icons.Default.Speed,
                             iconColor = PgSuccess,
-                            title = "Fast scan",
-                            subtitle = "Quick pass first, deep pass after",
+                            title = stringResource(R.string.settings_fast_scan),
+                            subtitle = stringResource(R.string.settings_fast_scan_subtitle),
                             checked = settings.fastScan,
                             onCheckedChange = {
                                 requestPatch(
-                                    title = "Fast scan",
-                                    message = "Enter your lock password to change fast scan.",
+                                    title = context.getString(R.string.settings_fast_scan),
+                                    message = context.getString(R.string.settings_fast_scan_message),
                                     patch = SettingsPatch(fastScan = it)
                                 )
                             },
@@ -262,17 +266,17 @@ fun SettingsScreen(
                 }
 
                 item {
-                    SettingsSection(title = "Advanced Blocking") {
+                    SettingsSection(title = stringResource(R.string.settings_section_advanced)) {
                         SettingsToggleRow(
                             icon = Icons.Default.Warning,
                             iconColor = PgDanger,
-                            title = "Strict mode",
-                            subtitle = "Block suspicious pages immediately",
+                            title = stringResource(R.string.settings_strict_mode),
+                            subtitle = stringResource(R.string.settings_strict_subtitle),
                             checked = settings.strictMode,
                             onCheckedChange = {
                                 requestPatch(
-                                    title = "Strict mode",
-                                    message = "Enter your lock password to change strict mode.",
+                                    title = context.getString(R.string.settings_strict_mode),
+                                    message = context.getString(R.string.settings_strict_message),
                                     patch = SettingsPatch(strictMode = it)
                                 )
                             }
@@ -280,13 +284,13 @@ fun SettingsScreen(
                         SettingsToggleRow(
                             icon = Icons.Default.VisibilityOff,
                             iconColor = PgAccentViolet,
-                            title = "Block private tabs",
-                            subtitle = "Prevent Incognito / Private browsing",
+                            title = stringResource(R.string.settings_block_private_tabs),
+                            subtitle = stringResource(R.string.settings_private_tabs_subtitle),
                             checked = settings.incognitoEnabled,
                             onCheckedChange = {
                                 requestPatch(
-                                    title = "Private tabs",
-                                    message = "Enter your lock password to change private tab blocking.",
+                                    title = context.getString(R.string.settings_private_tabs_title),
+                                    message = context.getString(R.string.settings_private_tabs_message),
                                     patch = SettingsPatch(incognitoEnabled = it)
                                 )
                             },
@@ -296,14 +300,14 @@ fun SettingsScreen(
                 }
 
                 item {
-                    SettingsSection(title = "Filter sensitivity") {
+                    SettingsSection(title = stringResource(R.string.home_section_filter_sensitivity)) {
                         Column(modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)) {
                             ModernSensitivitySelector(
                                 selected = settings.sensitivity,
                                 onSelect = {
                                     requestPatch(
-                                        title = "Filter sensitivity",
-                                        message = "Enter your lock password to change sensitivity.",
+                                        title = context.getString(R.string.home_section_filter_sensitivity),
+                                        message = context.getString(R.string.settings_sensitivity_message),
                                         patch = SettingsPatch(sensitivity = it)
                                     )
                                 }
@@ -312,8 +316,8 @@ fun SettingsScreen(
                             SettingsActionRow(
                                 icon = Icons.Default.Speed,
                                 iconColor = PgAccentBlue,
-                                title = "Fast-scan image budget",
-                                subtitle = "${settings.fastScanLimit} images per pass",
+                                title = stringResource(R.string.settings_fast_scan_budget),
+                                subtitle = stringResource(R.string.settings_images_per_pass, settings.fastScanLimit),
                                 onClick = { showFastScanLimitDialog = true },
                                 showDivider = false
                             )
@@ -322,12 +326,12 @@ fun SettingsScreen(
                 }
 
                 item {
-                    SettingsSection(title = "Domain rules") {
+                    SettingsSection(title = stringResource(R.string.settings_section_domain_rules)) {
                         DomainNavRow(
                             icon = Icons.Default.CheckCircle,
                             iconColor = PgSuccess,
-                            title = "Whitelist",
-                            subtitle = "Domains that are always allowed",
+                            title = stringResource(R.string.settings_whitelist_title),
+                            subtitle = stringResource(R.string.settings_whitelist_subtitle_row),
                             count = parseDomains(whitelistText).size,
                             onClick = {
                                 destination = SettingsDestination.WHITELIST
@@ -337,8 +341,8 @@ fun SettingsScreen(
                         DomainNavRow(
                             icon = Icons.Default.Block,
                             iconColor = PgDanger,
-                            title = "Blacklist",
-                            subtitle = "Domains that are always blocked",
+                            title = stringResource(R.string.settings_blacklist_title),
+                            subtitle = stringResource(R.string.settings_blacklist_subtitle_row),
                             count = parseDomains(blacklistText).size,
                             showDivider = false,
                             onClick = {
@@ -350,12 +354,12 @@ fun SettingsScreen(
                 }
 
                 item {
-                    SettingsSection(title = "Security") {
+                    SettingsSection(title = stringResource(R.string.settings_section_security)) {
                         SettingsActionRow(
                             icon = Icons.Default.Lock,
                             iconColor = PgAccentBlue,
-                            title = "Change lock password",
-                            subtitle = "Update the password used for protected changes",
+                            title = stringResource(R.string.settings_change_lock_password),
+                            subtitle = stringResource(R.string.settings_change_lock_password_subtitle),
                             onClick = { showChangePasswordDialog = true },
                             showDivider = false
                         )
@@ -379,7 +383,7 @@ fun SettingsScreen(
         PasswordGateDialog(
             title = change.title,
             message = change.message,
-            confirmText = change.confirmText,
+            confirmText = change.confirmText ?: stringResource(R.string.common_apply_change),
             onDismiss = { pendingChange = null },
             onConfirm = { password ->
                 onSavePatch(change.patch, password) { ok ->
@@ -450,7 +454,7 @@ private fun SettingsTopBar(
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
+                        contentDescription = stringResource(R.string.common_back),
                         tint = PgText,
                         modifier = Modifier.size(20.dp)
                     )
@@ -467,7 +471,7 @@ private fun SettingsTopBar(
                 ) {
                     Icon(
                         Icons.Default.Menu,
-                        contentDescription = "Open menu",
+                        contentDescription = stringResource(R.string.common_open_menu),
                         tint = PgText,
                         modifier = Modifier.size(20.dp)
                     )
@@ -487,7 +491,7 @@ private fun SettingsTopBar(
                     .padding(horizontal = 10.dp, vertical = 6.dp)
             ) {
                 Text(
-                    text = if (hasPassword) "Secure" else "Required",
+                    text = if (hasPassword) stringResource(R.string.common_secure) else stringResource(R.string.common_required),
                     color = if (hasPassword) PgSuccess else PgDanger,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
@@ -598,7 +602,7 @@ private fun ModernSensitivitySelector(
     ) {
         options.forEach { option ->
             val active = selected == option
-            val label = option.name.lowercase().replaceFirstChar { it.titlecase() }
+            val label = sensitivityLabel(option)
             val activeColor = when (option) {
                 Sensitivity.LOW -> PgSuccess
                 Sensitivity.MEDIUM -> PgAccentBlue
@@ -644,8 +648,8 @@ private fun FastScanLimitDialog(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("Fast-scan image budget", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = PgText)
-            Text("Choose a value from 4 to 40 and confirm with your lock password.", fontSize = 12.sp, color = PgMuted)
+            Text(stringResource(R.string.settings_fast_scan_budget), fontSize = 17.sp, fontWeight = FontWeight.Bold, color = PgText)
+            Text(stringResource(R.string.settings_choose_budget_message), fontSize = 12.sp, color = PgMuted)
             val fieldColors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = PgAccentBlue,
                 unfocusedBorderColor = Color.White.copy(0.12f),
@@ -657,7 +661,7 @@ private fun FastScanLimitDialog(
             OutlinedTextField(
                 value = value,
                 onValueChange = { value = it.filter { c -> c.isDigit() }.take(2) },
-                label = { Text("Image budget", color = PgMuted, fontSize = 13.sp) },
+                label = { Text(stringResource(R.string.settings_image_budget), color = PgMuted, fontSize = 13.sp) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
@@ -666,7 +670,7 @@ private fun FastScanLimitDialog(
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Password", color = PgMuted, fontSize = 13.sp) },
+                label = { Text(stringResource(R.string.common_password), color = PgMuted, fontSize = 13.sp) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
@@ -683,8 +687,17 @@ private fun FastScanLimitDialog(
                     disabledContainerColor = Color.White.copy(0.07f)
                 )
             ) {
-                Text("Apply change", color = Color(0xFF0A0F1E), fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.common_apply_change), color = Color(0xFF0A0F1E), fontWeight = FontWeight.SemiBold)
             }
         }
+    }
+}
+
+@Composable
+private fun sensitivityLabel(option: Sensitivity): String {
+    return when (option) {
+        Sensitivity.LOW -> stringResource(R.string.sensitivity_low)
+        Sensitivity.MEDIUM -> stringResource(R.string.sensitivity_medium)
+        Sensitivity.HIGH -> stringResource(R.string.sensitivity_high)
     }
 }

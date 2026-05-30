@@ -55,6 +55,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import androidx.annotation.StringRes
+import com.pureguard.mobile.R
 import com.pureguard.mobile.ui.theme.PgAccentBlue
 import com.pureguard.mobile.ui.theme.PgAccentViolet
 import com.pureguard.mobile.ui.theme.PgBgStart
@@ -66,9 +69,9 @@ private data class OnboardingPage(
     val icon: ImageVector,
     val iconTint: Color,
     val iconBg: Color,
-    val title: String,
-    val subtitle: String,
-    val bullets: List<Pair<String, String>>
+    @StringRes val titleRes: Int,
+    @StringRes val subtitleRes: Int,
+    val bullets: List<Pair<Int, Int>>
 )
 
 private val pages = listOf(
@@ -76,36 +79,36 @@ private val pages = listOf(
         icon = Icons.Default.Shield,
         iconTint = PgAccentBlue,
         iconBg = Color(0xFF1E3A5F),
-        title = "Your Digital Shield",
-        subtitle = "PureGuard protects your device from harmful content before it ever reaches your screen.",
+        titleRes = R.string.onboarding_page1_title,
+        subtitleRes = R.string.onboarding_page1_subtitle,
         bullets = listOf(
-            "Real-time" to "Blocks threats instantly",
-            "On-device" to "No data leaves your phone",
-            "Always on" to "Runs silently in background"
+            R.string.onboarding_page1_bullet1_title to R.string.onboarding_page1_bullet1_body,
+            R.string.onboarding_page1_bullet2_title to R.string.onboarding_page1_bullet2_body,
+            R.string.onboarding_page1_bullet3_title to R.string.onboarding_page1_bullet3_body
         )
     ),
     OnboardingPage(
         icon = Icons.Default.Wifi,
         iconTint = PgAccentViolet,
         iconBg = Color(0xFF2D1B69),
-        title = "Multi-Layer Defense",
-        subtitle = "Three powerful protection layers work together to keep you safe across every app and browser.",
+        titleRes = R.string.onboarding_page2_title,
+        subtitleRes = R.string.onboarding_page2_subtitle,
         bullets = listOf(
-            "DNS filter" to "Blocks malicious domains at the source",
-            "VPN shield" to "Intercepts harmful network requests",
-            "Screen monitor" to "Detects risky URLs in real time"
+            R.string.onboarding_page2_bullet1_title to R.string.onboarding_page2_bullet1_body,
+            R.string.onboarding_page2_bullet2_title to R.string.onboarding_page2_bullet2_body,
+            R.string.onboarding_page2_bullet3_title to R.string.onboarding_page2_bullet3_body
         )
     ),
     OnboardingPage(
         icon = Icons.Default.Analytics,
         iconTint = PgSuccess,
         iconBg = Color(0xFF0F3B2A),
-        title = "Stay in Control",
-        subtitle = "Full visibility into what's being blocked, with customizable sensitivity and tamper protection.",
+        titleRes = R.string.onboarding_page3_title,
+        subtitleRes = R.string.onboarding_page3_subtitle,
         bullets = listOf(
-            "Analytics" to "See exactly what was blocked and why",
-            "Sensitivity" to "Tune protection to your needs",
-            "Tamper lock" to "Password-protect your settings"
+            R.string.onboarding_page3_bullet1_title to R.string.onboarding_page3_bullet1_body,
+            R.string.onboarding_page3_bullet2_title to R.string.onboarding_page3_bullet2_body,
+            R.string.onboarding_page3_bullet3_title to R.string.onboarding_page3_bullet3_body
         )
     )
 )
@@ -150,7 +153,7 @@ fun OnboardingScreen(onFinished: () -> Unit) {
             ) {
                 TextButton(onClick = onFinished) {
                     Text(
-                        text = "Skip",
+                        text = stringResource(R.string.onboarding_skip),
                         color = PgMuted,
                         fontSize = 15.sp
                     )
@@ -194,7 +197,7 @@ fun OnboardingScreen(onFinished: () -> Unit) {
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = page.title,
+                        text = stringResource(page.titleRes),
                         fontSize = 30.sp,
                         fontWeight = FontWeight.Bold,
                         color = PgText,
@@ -205,7 +208,7 @@ fun OnboardingScreen(onFinished: () -> Unit) {
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = page.subtitle,
+                        text = stringResource(page.subtitleRes),
                         fontSize = 16.sp,
                         color = PgMuted,
                         textAlign = TextAlign.Center,
@@ -225,7 +228,7 @@ fun OnboardingScreen(onFinished: () -> Unit) {
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                page.bullets.forEach { (label, detail) ->
+                page.bullets.forEach { (labelRes, detailRes) ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(14.dp)
@@ -237,13 +240,13 @@ fun OnboardingScreen(onFinished: () -> Unit) {
                         )
                         Column {
                             Text(
-                                text = label,
+                                text = stringResource(labelRes),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = PgText
                             )
                             Text(
-                                text = detail,
+                                text = stringResource(detailRes),
                                 fontSize = 13.sp,
                                 color = PgMuted
                             )
@@ -294,7 +297,11 @@ fun OnboardingScreen(onFinished: () -> Unit) {
                 )
             ) {
                 Text(
-                    text = if (currentPage < pages.lastIndex) "Continue" else "Get Started",
+                    text = if (currentPage < pages.lastIndex) {
+                        stringResource(R.string.onboarding_continue)
+                    } else {
+                        stringResource(R.string.onboarding_get_started)
+                    },
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF0A0F1E)

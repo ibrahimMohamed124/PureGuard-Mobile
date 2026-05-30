@@ -60,7 +60,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.res.stringResource
+import androidx.annotation.StringRes
+import com.pureguard.mobile.R
 import com.pureguard.mobile.core.datastore.Prefs
+import com.pureguard.mobile.core.localization.AppLanguage
 import com.pureguard.mobile.core.navigation.NavRoutes
 import com.pureguard.mobile.ui.theme.PgAccentBlue
 import com.pureguard.mobile.ui.theme.PgAccentViolet
@@ -70,7 +74,6 @@ import com.pureguard.mobile.ui.theme.TbColor
 
 private const val PREF_DRAWER_USERNAME = "drawer_username"
 internal const val PREF_DRAWER_THEME = "drawer_theme"
-internal const val PREF_DRAWER_LANGUAGE = "drawer_language"
 
 private data class DrawerPalette(
     val background: Color,
@@ -82,35 +85,22 @@ private data class DrawerPalette(
 )
 
 private data class FaqItem(
-    val question: String,
-    val answer: String
+    @StringRes val questionRes: Int,
+    @StringRes val answerRes: Int
+)
+
+private data class ChoiceOption(
+    val value: String,
+    val label: String
 )
 
 private val faqItems = listOf(
-    FaqItem(
-        question = "How does the local VPN work?",
-        answer = "PureGuard creates a local VPN tunnel on your device that intercepts all DNS requests on port 53. It matches requested domains against a blocklist of 250,000+ known adult and malicious sites. All filtering happens on-device - your traffic is never routed to an external server, keeping your data completely private."
-    ),
-    FaqItem(
-        question = "Why does the app need Accessibility permissions?",
-        answer = "The Accessibility Service allows PureGuard to monitor browser URLs in real-time across all apps. When a user navigates to a blocked site, PureGuard instantly overlays a block screen. It also prevents unauthorized tampering with the app's settings or attempts to force-stop the service."
-    ),
-    FaqItem(
-        question = "Does it drain my battery?",
-        answer = "No. PureGuard's local filtering engine is highly optimized for minimal resource usage. The DNS interception layer processes requests in microseconds with near-zero CPU overhead, and the Accessibility Service runs only when a browser or system event is detected."
-    ),
-    FaqItem(
-        question = "Can I add custom domains to block?",
-        answer = "Yes. In Advanced Protection, you can add any domain to your custom blocklist. These domains are blocked in addition to the built-in filter list. You can remove them at any time."
-    ),
-    FaqItem(
-        question = "Which DNS providers does PureGuard support?",
-        answer = "PureGuard supports Cloudflare Families (1.1.1.3), CleanBrowsing Family Filter, and AdGuard Family DNS - all of which block adult content and malware. You can also enter a custom DNS over HTTPS (DoH) or DNS over TLS (DoT) endpoint."
-    ),
-    FaqItem(
-        question = "How do I uninstall PureGuard?",
-        answer = "If Device Administrator privileges are active, you must first deactivate them in Settings > Device Admin before uninstalling. If an uninstall PIN is configured, you'll be prompted to enter it. This protection mechanism ensures PureGuard cannot be bypassed accidentally."
-    )
+    FaqItem(R.string.faq_q_local_vpn, R.string.faq_a_local_vpn),
+    FaqItem(R.string.faq_q_accessibility, R.string.faq_a_accessibility),
+    FaqItem(R.string.faq_q_battery, R.string.faq_a_battery),
+    FaqItem(R.string.faq_q_custom_domains, R.string.faq_a_custom_domains),
+    FaqItem(R.string.faq_q_dns, R.string.faq_a_dns),
+    FaqItem(R.string.faq_q_uninstall, R.string.faq_a_uninstall)
 )
 
 @Composable
@@ -125,7 +115,7 @@ fun AppDrawer(
     var showUsernameDialog by rememberSaveable { mutableStateOf(false) }
 
     val palette = remember(selectedTheme) { drawerPalette(selectedTheme) }
-    val displayName = username.ifBlank { "PureGuard User" }
+    val displayName = username.ifBlank { stringResource(R.string.common_pureguard_user) }
 
     ModalDrawerSheet(
         modifier = Modifier
@@ -160,30 +150,30 @@ fun AppDrawer(
 
             item {
                 DrawerSectionTitle(
-                    title = "Menu",
+                    title = stringResource(R.string.drawer_menu),
                     icon = Icons.Default.Menu
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     DrawerMenuButton(
                         icon = Icons.Default.Palette,
-                        title = "Preferences",
-                        subtitle = "Theme and language",
+                        title = stringResource(R.string.drawer_preferences),
+                        subtitle = stringResource(R.string.drawer_preferences_subtitle),
                         selected = currentRoute == NavRoutes.Preferences.route,
                         palette = palette,
                         onClick = { onNavigate(NavRoutes.Preferences.route) }
                     )
                     DrawerMenuButton(
                         icon = Icons.Default.SupportAgent,
-                        title = "Support",
-                        subtitle = "Email, issue type and message",
+                        title = stringResource(R.string.drawer_support),
+                        subtitle = stringResource(R.string.drawer_support_subtitle),
                         selected = currentRoute == NavRoutes.Support.route,
                         palette = palette,
                         onClick = { onNavigate(NavRoutes.Support.route) }
                     )
                     DrawerMenuButton(
                         icon = Icons.Default.Info,
-                        title = "FAQs",
-                        subtitle = "Quick answers and guidance",
+                        title = stringResource(R.string.drawer_faqs),
+                        subtitle = stringResource(R.string.drawer_faqs_subtitle),
                         selected = currentRoute == NavRoutes.Faqs.route,
                         palette = palette,
                         onClick = { onNavigate(NavRoutes.Faqs.route) }
@@ -220,8 +210,8 @@ fun PreferencesDrawerPage(
     Scaffold(
         topBar = {
             DrawerFeatureTopBar(
-                title = "Preferences",
-                subtitle = "Theme and language controls",
+                title = stringResource(R.string.drawer_preferences),
+                subtitle = stringResource(R.string.preferences_subtitle),
                 icon = Icons.Default.Palette,
                 onBack = onBack
             )
@@ -239,24 +229,31 @@ fun PreferencesDrawerPage(
         ) {
             item {
                 DrawerSection(
-                    title = "Preferences",
+                    title = stringResource(R.string.drawer_preferences),
                     icon = Icons.Default.Palette,
                     palette = palette
                 ) {
                     DrawerChoiceGroup(
                         icon = Icons.Default.Palette,
-                        title = "Theme",
-                        selected = selectedTheme,
-                        options = listOf("Dark", "Light"),
+                        title = stringResource(R.string.preferences_theme),
+                        selectedValue = selectedTheme,
+                        options = listOf(
+                            ChoiceOption("Dark", stringResource(R.string.theme_dark)),
+                            ChoiceOption("Light", stringResource(R.string.theme_light))
+                        ),
                         palette = palette,
                         onSelect = onThemeSelected
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     DrawerChoiceGroup(
                         icon = Icons.Default.Language,
-                        title = "Language",
-                        selected = selectedLanguage,
-                        options = listOf("English", "العربية"),
+                        title = stringResource(R.string.preferences_language),
+                        selectedValue = selectedLanguage,
+                        options = listOf(
+                            ChoiceOption(AppLanguage.SYSTEM, stringResource(R.string.language_system)),
+                            ChoiceOption(AppLanguage.ENGLISH, stringResource(R.string.language_english)),
+                            ChoiceOption(AppLanguage.ARABIC, stringResource(R.string.language_arabic))
+                        ),
                         palette = palette,
                         onSelect = onLanguageSelected
                     )
@@ -272,15 +269,15 @@ fun SupportDrawerPage(
     onBack: () -> Unit
 ) {
     var supportEmail by rememberSaveable { mutableStateOf("") }
-    var issueType by rememberSaveable { mutableStateOf("Technical issue") }
+    var issueTypeIndex by rememberSaveable { mutableStateOf(0) }
     var supportMessage by rememberSaveable { mutableStateOf("") }
     val palette = remember(selectedTheme) { drawerPalette(selectedTheme) }
 
     Scaffold(
         topBar = {
             DrawerFeatureTopBar(
-                title = "Support",
-                subtitle = "Tell us what you need help with",
+                title = stringResource(R.string.drawer_support),
+                subtitle = stringResource(R.string.support_subtitle),
                 icon = Icons.Default.SupportAgent,
                 onBack = onBack
             )
@@ -298,15 +295,15 @@ fun SupportDrawerPage(
         ) {
             item {
                 DrawerSection(
-                    title = "Support",
+                    title = stringResource(R.string.drawer_support),
                     icon = Icons.Default.SupportAgent,
                     palette = palette
                 ) {
                     SupportForm(
                         email = supportEmail,
                         onEmailChange = { supportEmail = it },
-                        issueType = issueType,
-                        onIssueTypeChange = { issueType = it },
+                        issueTypeIndex = issueTypeIndex,
+                        onIssueTypeChange = { issueTypeIndex = it },
                         message = supportMessage,
                         onMessageChange = { supportMessage = it },
                         palette = palette
@@ -328,8 +325,8 @@ fun FaqsDrawerPage(
     Scaffold(
         topBar = {
             DrawerFeatureTopBar(
-                title = "FAQs",
-                subtitle = "Answers about PureGuard protection",
+                title = stringResource(R.string.drawer_faqs),
+                subtitle = stringResource(R.string.faqs_subtitle),
                 icon = Icons.Default.Info,
                 onBack = onBack
             )
@@ -390,7 +387,7 @@ private fun DrawerFeatureTopBar(
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.common_back),
                     tint = PgText,
                     modifier = Modifier.size(20.dp)
                 )
@@ -480,7 +477,7 @@ private fun DrawerProfileHeader(
             fontWeight = FontWeight.Bold
         )
         TextButton(onClick = onSetUsername) {
-            Text("Set username", color = PgAccentBlue, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.drawer_set_username), color = PgAccentBlue, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -578,8 +575,8 @@ private fun DrawerSection(
 private fun DrawerChoiceGroup(
     icon: ImageVector,
     title: String,
-    selected: String,
-    options: List<String>,
+    selectedValue: String,
+    options: List<ChoiceOption>,
     palette: DrawerPalette,
     onSelect: (String) -> Unit
 ) {
@@ -597,13 +594,13 @@ private fun DrawerChoiceGroup(
             Spacer(modifier = Modifier.width(10.dp))
             Column {
                 Text(title, color = palette.text, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                Text(selected, color = palette.muted, fontSize = 12.sp)
+                Text(options.firstOrNull { it.value == selectedValue }?.label.orEmpty(), color = palette.muted, fontSize = 12.sp)
             }
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             options.forEach { option ->
-                val selectedOption = selected == option
+                val selectedOption = selectedValue == option.value
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -614,12 +611,12 @@ private fun DrawerChoiceGroup(
                             color = if (selectedOption) PgAccentBlue.copy(alpha = 0.52f) else palette.border,
                             shape = RoundedCornerShape(14.dp)
                         )
-                        .clickable { onSelect(option) }
+                        .clickable { onSelect(option.value) }
                         .padding(vertical = 10.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = option,
+                        text = option.label,
                         color = if (selectedOption) PgAccentBlue else palette.muted,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 13.sp
@@ -634,21 +631,26 @@ private fun DrawerChoiceGroup(
 private fun SupportForm(
     email: String,
     onEmailChange: (String) -> Unit,
-    issueType: String,
-    onIssueTypeChange: (String) -> Unit,
+    issueTypeIndex: Int,
+    onIssueTypeChange: (Int) -> Unit,
     message: String,
     onMessageChange: (String) -> Unit,
     palette: DrawerPalette
 ) {
     var issueMenuExpanded by remember { mutableStateOf(false) }
-    val issueTypes = listOf("Technical issue", "Bug Report", "Feature Request", "Other")
+    val issueTypes = listOf(
+        R.string.support_issue_technical,
+        R.string.support_issue_bug,
+        R.string.support_issue_feature,
+        R.string.support_issue_other
+    )
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
             value = email,
             onValueChange = onEmailChange,
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Email") },
+            label = { Text(stringResource(R.string.support_email)) },
             leadingIcon = {
                 Icon(Icons.Default.AlternateEmail, contentDescription = null, tint = PgAccentBlue)
             },
@@ -668,8 +670,8 @@ private fun SupportForm(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Issue type", color = palette.muted, fontSize = 12.sp)
-                    Text(issueType, color = palette.text, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.support_issue_type), color = palette.muted, fontSize = 12.sp)
+                    Text(stringResource(issueTypes[issueTypeIndex]), color = palette.text, fontWeight = FontWeight.SemiBold)
                 }
                 Text("v", color = PgAccentBlue, fontWeight = FontWeight.Bold)
             }
@@ -678,11 +680,11 @@ private fun SupportForm(
                 expanded = issueMenuExpanded,
                 onDismissRequest = { issueMenuExpanded = false }
             ) {
-                issueTypes.forEach { type ->
+                issueTypes.forEachIndexed { index, type ->
                     DropdownMenuItem(
-                        text = { Text(type) },
+                        text = { Text(stringResource(type)) },
                         onClick = {
-                            onIssueTypeChange(type)
+                            onIssueTypeChange(index)
                             issueMenuExpanded = false
                         }
                     )
@@ -696,7 +698,7 @@ private fun SupportForm(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 150.dp),
-            label = { Text("Message") },
+            label = { Text(stringResource(R.string.support_message)) },
             minLines = 6,
             colors = drawerTextFieldColors(palette)
         )
@@ -721,7 +723,7 @@ private fun FaqRow(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = item.question,
+                text = stringResource(item.questionRes),
                 color = palette.text,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp,
@@ -738,7 +740,7 @@ private fun FaqRow(
         if (expanded) {
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = item.answer,
+                text = stringResource(item.answerRes),
                 color = palette.muted,
                 fontSize = 13.sp,
                 lineHeight = 19.sp
@@ -778,8 +780,8 @@ private fun UsernameDialog(
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text("Set username", color = palette.text, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Text("This name appears in your drawer profile.", color = palette.muted, fontSize = 12.sp)
+                    Text(stringResource(R.string.drawer_set_username), color = palette.text, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Text(stringResource(R.string.drawer_username_hint), color = palette.muted, fontSize = 12.sp)
                 }
             }
 
@@ -787,7 +789,7 @@ private fun UsernameDialog(
                 value = draftUsername,
                 onValueChange = { draftUsername = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Username") },
+                label = { Text(stringResource(R.string.drawer_username_label)) },
                 singleLine = true,
                 colors = drawerTextFieldColors(palette)
             )
@@ -800,7 +802,7 @@ private fun UsernameDialog(
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Cancel", color = palette.muted)
+                    Text(stringResource(R.string.common_cancel), color = palette.muted)
                 }
                 Button(
                     onClick = { onSave(draftUsername) },
@@ -811,7 +813,7 @@ private fun UsernameDialog(
                         contentColor = Color(0xFF07111F)
                     )
                 ) {
-                    Text("Save", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.common_save), fontWeight = FontWeight.Bold)
                 }
             }
         }

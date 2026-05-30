@@ -28,6 +28,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.pureguard.mobile.R
 import com.pureguard.mobile.ui.features.settings.SettingsDestination
 import com.pureguard.mobile.ui.theme.PgDanger
 import com.pureguard.mobile.ui.theme.PgMuted
@@ -46,8 +48,8 @@ fun DomainManagerScreen(
 ) {
     val isWhitelist = destination == SettingsDestination.WHITELIST
     val accentColor = if (isWhitelist) PgSuccess else PgDanger
-    val title = if (isWhitelist) "Allowed domains" else "Blocked domains"
-    val helper = if (isWhitelist) "These domains are always allowed through." else "These domains are always blocked."
+    val title = if (isWhitelist) stringResource(R.string.domain_allowed_title) else stringResource(R.string.domain_blocked_title)
+    val helper = if (isWhitelist) stringResource(R.string.domain_allowed_helper) else stringResource(R.string.domain_blocked_helper)
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -74,8 +76,8 @@ fun DomainManagerScreen(
                 OutlinedTextField(
                     value = domainInput,
                     onValueChange = onDomainInputChange,
-                    label = { Text("Domain to add", color = PgMuted, fontSize = 13.sp) },
-                    placeholder = { Text("example.com", color = PgMuted.copy(0.5f)) },
+                    label = { Text(stringResource(R.string.domain_to_add), color = PgMuted, fontSize = 13.sp) },
+                    placeholder = { Text(stringResource(R.string.domain_placeholder), color = PgMuted.copy(0.5f)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     enabled = !locked,
@@ -115,8 +117,8 @@ fun DomainManagerScreen(
                                 null, tint = accentColor, modifier = Modifier.size(24.dp)
                             )
                         }
-                        Text("No domains added yet", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = PgText)
-                        Text("Use the + button to add your first domain", fontSize = 12.sp, color = PgMuted)
+                        Text(stringResource(R.string.domain_empty_title), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = PgText)
+                        Text(stringResource(R.string.domain_empty_body), fontSize = 12.sp, color = PgMuted)
                     }
                 }
             }
